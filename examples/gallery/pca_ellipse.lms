@@ -1,0 +1,68 @@
+# Principal component analysis of a seeded 2-D Gaussian cloud: the eigenvectors of the sample covariance (symmetric
+# eigen-decomposition, Eigen) are the axes of the data ellipse; the eigenvalues are the variances along them.
+# lmnum computes, lmplot draws docs/images/pca_ellipse.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let n = 500;
+let z = num.normal(n, 2, 3);
+# stretch and rotate: x = z A with A = [[2.2, 1.2], [0.0, 0.7]], so the true covariance is A^T A
+let a = num.parse("2.2 1.2; 0.0 0.7");
+let pts = z.mul(a).shift(0.0);
+let mu0 = pts.col(0).mean();
+let mu1 = pts.col(1).mean();
+let means = num.matrix(n, 1).shift(mu0).hstack(num.matrix(n, 1).shift(mu1));
+let centered = pts.sub(means);
+let cov = centered.transpose().mul(centered).scale(1.0 / float(n - 1));
+let w = cov.eig_sym();                  # ascending eigenvalues
+let v = cov.eigvec_sym();               # columns are the eigenvectors
+num.print("covariance: " + cov.to_text());
+num.print("eigenvalues: " + w.to_text());
+# the population covariance A^T A = [[4.84, 2.64], [2.64, 1.93]] has eigenvalues 6.30 and 0.47
+let truth = a.transpose().mul(a);
+let tw = truth.eig_sym();
+num.assert_close(w.get(1, 0), tw.get(1, 0), 0.6);
+num.assert_close(w.get(0, 0), tw.get(0, 0), 0.12);
+pts.save_csv("data/pca_points.csv");
+# axes: from the mean along each eigenvector, length 2 sigma (= 2 sqrt(lambda)), both directions
+let axes = num.matrix(2, 6);
+for (k in range(0, 2)) {
+  let lam = w.get(1 - k, 0);
+  let vx = v.get(0, 1 - k);
+  let vy = v.get(1, 1 - k);
+  axes.set(k, 0, mu0).set(k, 1, mu1);
+  axes.set(k, 2, 2.0 * sqrt(lam) * vx).set(k, 3, 2.0 * sqrt(lam) * vy);
+  axes.set(k, 4, sqrt(lam)).set(k, 5, float(k));
+}
+axes.save_csv("data/pca_axes.csv");
+# the data ellipse (1 and 2 sigma) as polylines
+let ell = num.matrix(121, 5);
+for (i in range(0, 121)) {
+  let t = 6.283185307179586 * float(i) / 120.0;
+  let ca = cos(t);
+  let sa = sin(t);
+  for (m in range(0, 2)) {
+    let r = float(m + 1);
+    let ex = r * (sqrt(w.get(1, 0)) * ca * v.get(0, 1) + sqrt(w.get(0, 0)) * sa * v.get(0, 0));
+    let ey = r * (sqrt(w.get(1, 0)) * ca * v.get(1, 1) + sqrt(w.get(0, 0)) * sa * v.get(1, 0));
+    ell.set(i, 1 + 2 * m, mu0 + ex).set(i, 2 + 2 * m, mu1 + ey);
+  }
+}
+ell.save_csv("data/pca_ellipse.csv");
+end _dsl_
+savedsl(sim, "data/pca_ellipse-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/pca_ellipse-sim.dslb;
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/pca_ellipse.png", 900, 650);
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set size ratio -1");
+plot.cmd("set title 'PCA of 500 samples: principal axes and 1-sigma, 2-sigma ellipses'");
+plot.cmd("set xlabel 'x'; set ylabel 'y'; set key top left box opaque");
+plot.cmd("plot 'data/pca_points.csv' u 1:2 w p pt 7 ps 0.5 lc rgb '#9ecae1' t 'samples', 'data/pca_ellipse.csv' u 2:3 w l lw 2 lc rgb '#08519c' t '1 sigma', '' u 4:5 w l lw 2 dt 2 lc rgb '#08519c' t '2 sigma', 'data/pca_axes.csv' u 1:2:3:4 every ::0::0 w vectors lw 3.5 lc rgb '#d62728' t 'PC1', '' u 1:2:3:4 every ::1::1 w vectors lw 3.5 lc rgb '#2ca02c' t 'PC2'");
+plot.close();
+end _dsl_
+savedsl(draw, "data/pca_ellipse-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/pca_ellipse-draw.dslb;
+assert(r.code == 0);
+println("wrote images/pca_ellipse.png");

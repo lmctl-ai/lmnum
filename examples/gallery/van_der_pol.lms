@@ -1,0 +1,41 @@
+# Van der Pol oscillator: every trajectory, from inside or outside, is drawn onto the same limit cycle.
+# lmnum (CVODE) integrates six starting points; lmplot draws docs/images/van_der_pol.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+for (k in range(0, 6)) {
+  let sys = num.ode(2);
+  sys.param("mu", 1.5);
+  sys.rhs(0, "y1").rhs(1, "mu*(1 - y0*y0)*y1 - y0");
+  # two starts inside the cycle, four outside
+  let x0 = 0.1;
+  let v0 = 0.0;
+  if (k == 1) { x0 = 0.0; v0 = 0.5; }
+  if (k == 2) { x0 = 3.5; v0 = 3.0; }
+  if (k == 3) { x0 = -3.5; v0 = 3.0; }
+  if (k == 4) { x0 = 3.0; v0 = -4.0; }
+  if (k == 5) { x0 = -1.0; v0 = 5.0; }
+  sys.init(0, x0).init(1, v0);
+  sys.tol(0.00000001, 0.0000000001);
+  let sol = sys.solve(0.0, 25.0, 1000);
+  sol.save_csv("data/vdp_" + str(k) + ".csv");
+  # a start inside the cycle grows to the cycle amplitude max|x| = 2.02 (mu = 1.5)
+  if (k == 0) { num.assert_close(sol.col(1).max(), 2.0, 0.05); }
+}
+end _dsl_
+savedsl(sim, "data/van_der_pol-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/van_der_pol-sim.dslb;
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/van_der_pol.png", 900, 650);
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset colorbox");
+plot.cmd("set title 'Van der Pol oscillator, mu = 1.5: trajectories converge to the limit cycle'");
+plot.cmd("set xlabel 'x'; set ylabel 'dx/dt'; set xrange [-4:4]; set yrange [-6:9]; set key off");
+plot.cmd("plot for [k=0:5] sprintf('data/vdp_%d.csv', k) u 2:3 w l lw 1.8 lc palette frac k/5.0, for [k=0:5] sprintf('data/vdp_%d.csv', k) every ::0::0 u 2:3 w p pt 7 ps 1.6 lc rgb 'black'");
+plot.close();
+end _dsl_
+savedsl(draw, "data/van_der_pol-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/van_der_pol-draw.dslb;
+assert(r.code == 0);
+println("wrote images/van_der_pol.png");

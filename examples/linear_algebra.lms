@@ -40,4 +40,6 @@ num.assert_close(c.get(0, 0), 1.0, 0.000000001);
 num.assert_close(c.get(1, 0), 2.0, 0.000000001);
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
 println(f"wrote {out}");

@@ -1,0 +1,38 @@
+# The Lorenz butterfly drawn as it is integrated: a 90-frame animation of one CVODE trajectory (t = 0..40) with a
+# fading trail and a moving head, encoded to docs/images/lorenz.gif with ffmpeg (palette GIF).
+# Needs lmplot and ffmpeg. lmnum computes, lmplot draws the frames.
+mkdir("images");
+mkdir("data");
+mkdir("build/lorenz_frames");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let sys = num.ode(3);
+sys.param("sigma", 10.0).param("rho", 28.0).param("beta", 2.6666666666666665);
+sys.rhs(0, "sigma*(y1 - y0)").rhs(1, "y0*(rho - y2) - y1").rhs(2, "y0*y1 - beta*y2");
+sys.init(0, 1.0).init(1, 1.0).init(2, 1.0);
+sys.tol(0.00000001, 0.0000000001);
+let sol = sys.solve(0.0, 40.0, 3601);
+sol.save_csv("data/lorenz_anim.csv");
+# the attractor stays bounded: |x| < 25, 0 < z < 50
+num.assert_close(min(sol.col(3).max(), 50.0), sol.col(3).max(), 0.0);
+end _dsl_
+savedsl(sim, "data/lorenz_anim-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/lorenz_anim-sim.dslb;
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.cmd("set cbrange [0:40]; unset colorbox; set border 3; set tics nomirror; unset key; set xrange [-22:22]; set yrange [0:50]");
+plot.cmd("set xlabel 'x'; set ylabel 'z'; set title 'Lorenz system: sigma = 10, rho = 28, beta = 8/3'");
+for (k in range(0, 90)) {
+  let last = 40 * (k + 1);
+  let first = max(0, last - 1400);
+  plot.png("build/lorenz_frames/f" + str(k) + ".png", 640, 480);
+  plot.cmd("plot 'data/lorenz_anim.csv' every ::" + str(first) + "::" + str(last) + " u 2:4:1 w l lw 1.6 lc palette, 'data/lorenz_anim.csv' every ::" + str(last) + "::" + str(last) + " u 2:4 w p pt 7 ps 1.8 lc rgb 'black'");
+  plot.close();
+}
+end _dsl_
+savedsl(draw, "data/lorenz_anim-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/lorenz_anim-draw.dslb;
+assert(r.code == 0);
+r = system ffmpeg -y -loglevel error -framerate 18 -i build/lorenz_frames/f%d.png -vf "split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=none" images/lorenz.gif;
+assert(r.code == 0);
+println("wrote images/lorenz.gif");

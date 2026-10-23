@@ -1,0 +1,48 @@
+# Predator-prey cycles (Lotka-Volterra): the populations oscillate in time, and every starting point
+# orbits its own closed curve around the fixed point (c/d, a/b) because H = d x - c ln x + b y - a ln y is conserved.
+# lmnum integrates with CVODE and writes CSVs; lmplot draws docs/images/predator_prey.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+for (k in range(0, 5)) {
+  let sys = num.ode(2);
+  sys.param("a", 1.1).param("b", 0.4).param("c", 0.4).param("d", 0.1);
+  sys.rhs(0, "a*y0 - b*y0*y1").rhs(1, "d*y0*y1 - c*y1");
+  sys.init(0, 4.0 + 3.0 * float(k)).init(1, 6.0);
+  sys.tol(0.00000001, 0.0000000001);
+  let sol = sys.solve(0.0, 40.0, 801);
+  sol.save_csv("data/lv_" + str(k) + ".csv");
+  # the conserved quantity H(x, y) stays constant along the orbit (checked at the end points)
+  let h0 = num.func("0.1*x - 0.4*log(x) + 0.4*y - 1.1*log(y)", "x,y");
+  if (k == 0) {
+    let first = sol.row(0);
+    let last = sol.row(800);
+    let lg = num.func("log(a)", "a");
+    let h_first = 0.1 * first.get(0, 1) - 0.4 * lg.eval(first.get(0, 1)) + 0.4 * first.get(0, 2) - 1.1 * lg.eval(first.get(0, 2));
+    let h_last = 0.1 * last.get(0, 1) - 0.4 * lg.eval(last.get(0, 1)) + 0.4 * last.get(0, 2) - 1.1 * lg.eval(last.get(0, 2));
+    num.assert_close(h_first, h_last, 0.00001);
+    num.print("H conserved: " + str(h_first) + " -> " + str(h_last));
+  }
+}
+num.parse("4.0 2.75").save_csv("data/lv_fixed.csv");   # the fixed point (c/d, a/b)
+end _dsl_
+savedsl(sim, "data/predator_prey-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/predator_prey-sim.dslb;
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/predator_prey.png", 1000, 480);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
+plot.cmd("set title 'populations in time'; set xlabel 'time'; set ylabel 'population'; set key top right horizontal; set yrange [0:17]");
+plot.cmd("plot 'data/lv_0.csv' u 1:2 w l lw 2.5 lc rgb '#2ca02c' t 'prey', 'data/lv_0.csv' u 1:3 w l lw 2.5 lc rgb '#d62728' t 'predators'");
+plot.cmd("set title 'phase portrait: closed orbits'; set xlabel 'prey'; set ylabel 'predators'; set key off; unset colorbox");
+plot.cmd("set xrange [0:30]; set yrange [0:22]");
+plot.cmd("plot for [k=0:4] sprintf('data/lv_%d.csv', k) u 2:3 w l lw 2 lc palette frac k/4.0, 'data/lv_fixed.csv' u 1:2 w p pt 7 ps 1.8 lc rgb 'black'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/predator_prey-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/predator_prey-draw.dslb;
+assert(r.code == 0);
+println("wrote images/predator_prey.png");

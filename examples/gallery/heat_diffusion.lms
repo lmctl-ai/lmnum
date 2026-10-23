@@ -1,0 +1,69 @@
+# Heat equation u_t = D u_xx on [0, 1] with fixed ends, by the method of lines: 59 interior points make a stiff ODE
+# system that CVODE integrates (BDF). The initial profile sin(pi x) + 0.5 sin(3 pi x) decays mode by mode, the sharper
+# mode 9 times faster, which is the exact solution the numbers are checked against.
+# lmnum computes, lmplot draws docs/images/heat_diffusion.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let m = 59;                                      # interior points, h = 1/60
+let h = 1.0 / 60.0;
+let dd = 0.1;
+let sys = num.ode(m).stiff();
+sys.param("c", dd / (h * h));
+for (i in range(0, m)) {
+  let left = "0";
+  let right = "0";
+  if (i > 0) { left = "y" + str(i - 1); }
+  if (i < m - 1) { right = "y" + str(i + 1); }
+  sys.rhs(i, "c*(" + left + " - 2*y" + str(i) + " + " + right + ")");
+  let x = float(i + 1) * h;
+  sys.init(i, sin(3.141592653589793 * x) + 0.5 * sin(3.0 * 3.141592653589793 * x));
+}
+sys.tol(0.0000000001, 0.000000000001);
+let sol = sys.solve(0.0, 0.5, 6);                 # snapshots at t = 0, 0.1, ... 0.5
+let out = num.matrix(m + 2, 7);
+let worst = 0.0;
+for (i in range(0, m + 2)) {
+  let x = float(i) * h;
+  out.set(i, 0, x);
+  for (k in range(0, 6)) {
+    let t = 0.1 * float(k);
+    let exact = pow(2.718281828459045, -dd * 9.869604401089358 * t) * sin(3.141592653589793 * x)
+              + 0.5 * pow(2.718281828459045, -9.0 * dd * 9.869604401089358 * t) * sin(3.0 * 3.141592653589793 * x);
+    out.set(i, 1 + k, exact);
+  }
+}
+# numerical solution rows go to a second table (analytic values stay as smooth curves in the plot)
+let num_tab = num.matrix(m + 2, 7);
+for (i in range(0, m + 2)) {
+  num_tab.set(i, 0, float(i) * h);
+  for (k in range(0, 6)) {
+    let v = 0.0;
+    if (i > 0) { if (i < m + 1) { v = sol.get(k, i); } }
+    num_tab.set(i, 1 + k, v);
+    let e = abs(v - out.get(i, 1 + k));
+    worst = max(worst, e);
+  }
+}
+num.print("max |numerical - exact| over all snapshots: " + str(worst));
+num.assert_close(worst, 0.0, 0.0005);              # second-order space discretization error
+out.save_csv("data/heat_exact.csv");
+num_tab.save_csv("data/heat_numeric.csv");
+end _dsl_
+savedsl(sim, "data/heat_diffusion-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/heat_diffusion-sim.dslb;
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/heat_diffusion.png", 900, 560);
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset colorbox");
+plot.cmd("set title 'Heat equation by the method of lines (CVODE BDF): numerical points on exact curves'");
+plot.cmd("set xlabel 'x'; set ylabel 'temperature u'; set key top right box opaque title 't ='");
+plot.cmd("set palette defined (0 '#b2182b', 1 '#2166ac')");
+plot.cmd("plot for [k=0:5] 'data/heat_exact.csv' u 1:(column(k+2)) w l lw 2.5 lc palette frac k/5.0 t sprintf('%.1f', 0.1*k), for [k=0:5] 'data/heat_numeric.csv' u 1:(column(k+2)) every 3 w p pt 6 ps 1.1 lc palette frac k/5.0 notitle");
+plot.close();
+end _dsl_
+savedsl(draw, "data/heat_diffusion-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/heat_diffusion-draw.dslb;
+assert(r.code == 0);
+println("wrote images/heat_diffusion.png");

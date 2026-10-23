@@ -16,4 +16,6 @@ num.assert_close(last.get(0, 1) + last.get(0, 2) + last.get(0, 3), 1.0, 0.000000
 num.assert_close(last.get(0, 1), 0.7158, 0.001);   # reference value from the literature
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
 println(f"wrote {out}");

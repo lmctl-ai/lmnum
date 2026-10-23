@@ -164,6 +164,21 @@ else
   ok "gallery examples skipped (no lmplot on PATH, LMNUM_TEST_NETWORK unset): docs/images not regenerated"
 fi
 
+# --dry-run runs the program but writes no files.
+cat >"$WORK/dry.lms" <<LMS
+p = _dsl_ cli="lmnum";
+num.identity(2).save_csv("$WORK/dry.csv");
+end _dsl_
+savedsl(p, "$WORK/dry.dslb");
+LMS
+"$LMSCRIPT" "$WORK/dry.lms" >/dev/null || fail "dry.lms compile"
+"$HOST" --dry-run --dsl "$WORK/dry.dslb" >/dev/null 2>"$WORK/dry.err" || fail "dry run"
+[ ! -e "$WORK/dry.csv" ] || fail "--dry-run wrote a file"
+grep -q "would write" "$WORK/dry.err" || fail "--dry-run did not report the skipped write"
+"$HOST" --dsl "$WORK/dry.dslb" >/dev/null || fail "real run"
+[ -s "$WORK/dry.csv" ] || fail "save_csv wrote nothing"
+ok "--dry-run reports save_csv without writing; a real run writes"
+
 set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
 set +e; "$HOST" >/dev/null 2>&1; code=$?; set -e

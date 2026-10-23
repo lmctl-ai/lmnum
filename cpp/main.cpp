@@ -32,6 +32,7 @@ struct Ode { lmnum::OdeSpec spec; };
 struct System { std::vector<std::string> eqs; };
 
 struct Host {
+  bool dry_run = false;  // --dry-run: save_csv reports the file it would write and writes nothing
   std::vector<std::unique_ptr<Mat>> mats;
   std::vector<std::unique_ptr<Func>> funcs;
   std::vector<std::unique_ptr<Ode>> odes;
@@ -337,7 +338,11 @@ void register_host(dslvm::Registry &r, Host &h) {
     return h.mat(m);
   });
   method(r, "Matrix", "to_text", {}, "string", [](void *p, Args &) { return Value::string(to_text(M(p))); });
-  method(r, "Matrix", "save_csv", {"string"}, "void", [](void *p, Args &a) {
+  method(r, "Matrix", "save_csv", {"string"}, "void", [&h](void *p, Args &a) {
+    if (h.dry_run) {
+      std::cerr << "[dry-run] would write " << a[0].s << " (" << M(p).rows() << "x" << M(p).cols() << ")\n";
+      return Value::none();
+    }
     std::ofstream f(a[0].s);
     if (!f) throw dslvm::Error("Matrix.save_csv: cannot write " + a[0].s);
     for (int i = 0; i < M(p).rows(); i++) { for (int j = 0; j < M(p).cols(); j++) f << (j ? " " : "") << fmt_exact(M(p)(i, j)); f << "\n"; }
@@ -420,7 +425,7 @@ int main(int argc, char **argv) {
   }
   if (argc == 2 && a1 == "--dsl-signatures") { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return 0; }
   int first = 2;
-  if (argc >= 2 && a1 == "--dry-run") first = 3;  // accepted for symmetry: nothing here has side effects beyond files
+  if (argc >= 2 && a1 == "--dry-run") { first = 3; host.dry_run = true; }  // the only side effect is save_csv
   if (argc <= first || std::string(argv[first - 1]) != "--dsl") { std::cerr << usage; return 2; }
   for (int i = first; i < argc; i++)
     if (std::string(argv[i]).empty() || std::string(argv[i]).rfind("--", 0) == 0) { std::cerr << usage; return 2; }

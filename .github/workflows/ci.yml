@@ -108,6 +108,7 @@ jobs:
         shell: bash
         env:
           LMNUM_TEST_NETWORK: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./test.sh
 
       - name: package artifact

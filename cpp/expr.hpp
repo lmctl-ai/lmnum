@@ -108,8 +108,8 @@ class Expr {
       for (size_t i = 0; i < vars_.size(); i++) if (vars_[i] == id) return std::make_unique<Var>((int)i);
       auto it = params_.find(id);
       if (it != params_.end()) return std::make_unique<Num>(it->second);
-      if (id == "pi") return std::make_unique<Num>(M_PI);
-      if (id == "e") return std::make_unique<Num>(M_E);
+      if (id == "pi") return std::make_unique<Num>(3.14159265358979323846);
+      if (id == "e") return std::make_unique<Num>(2.71828182845904523536);
       fail("unknown name '" + id + "'");
     }
     fail(std::string("unexpected '") + c + "'");

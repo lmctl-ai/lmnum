@@ -1,5 +1,9 @@
 # Open items
 
+Fixed in 0.1.2: NaN/inf results of `eval`/`Func.eval`/`map` are errors; `polyfit`/`interp` need vectors;
+`load_csv` skips any non-numeric first line; `integrate_tol` takes a tolerance; `svd_u/svd_v`, `cholesky`,
+`block`, `sorted`, `minimize_path` added for the gallery (SVD compression, correlated Monte Carlo, Nelder-Mead paths).
+
 - IDA (DAEs) and ARKODE (explicit/IMEX Runge-Kutta, higher order for non-stiff) are not built;
   enabling them is a CMake option plus schema methods.
 - Sparse matrices (Eigen Sparse + KLU/SuiteSparse is LGPL/GPL-mixed: needs care), complex matrices,
@@ -11,14 +15,10 @@
 
 ## From the 2026-10-23 review (fixed items are in git log; these remain)
 
-- `Num.polyfit`/`interp` accept any matrix shape and use it flattened (column-major); a 2x2 "x"
-  is not an error.
-- `Num.load_csv` skips a header only when its first character is a letter; `save_csv` writes
-  space-separated values despite the name (lmplot reads both).
-- `Num.integrate` has a fixed absolute tolerance (1e-10) and finite bounds only; no infinite
-  intervals or user tolerance. `minimize` stops on the simplex function-value spread only.
+- `save_csv` writes space-separated values despite the name (lmplot reads both; changing it would
+  break every gallery plot that reads the files without `set datafile separator`).
+- `Num.integrate` has finite bounds only (no infinite intervals; substitute x = t/(1-t) in the
+  expression). `minimize` stops on the simplex function-value spread only.
 - `Num.normal` is portable up to last-ulp differences of the platform `log` (uniform draws are
   bit-exact); `tests/known_answers.lms` pins values with 1e-12 tolerance.
-- NaN results: `Num.eval("sqrt(-1)")` and `Func.eval` return NaN without error (only
-  `assert_close`, `root`, `integrate`, `minimize`, ODE and KINSOL reject non-finite values).
 - `test.sh` writes example outputs under the literal `build/` even with `BUILD_DIR` set.

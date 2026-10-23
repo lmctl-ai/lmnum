@@ -2,6 +2,7 @@
 # argument shapes that used to give silently wrong results (row-vector start for minimize).
 out = ARGV.len() > 0 ? ARGV[0] : "build/known_answers.dslb";
 mkdir("build/examples");
+write_file("build/examples/header.csv", "t,prey\n1,2\n3,4\n");
 p = _dsl_ cli="lmnum";
 let pi = num.eval("pi");
 # quadrature: smooth, endpoint singularities (integrable), rational
@@ -76,5 +77,42 @@ let big = num.normal(100000, 1, 7);
 num.assert_close(big.mean(), 0.0, 0.015);
 num.assert_close(big.std(), 1.0, 0.015);
 num.assert_close(num.random(100000, 1, 7).mean(), 0.5, 0.005);
+# thin SVD factors rebuild the matrix: A = U diag(s) V^T (3x2, rank 2)
+let a32 = num.parse("3 1; 1 3; 1 1");
+let sv = a32.svd_values();
+let us = a32.svd_u();
+let vs = a32.svd_v();
+let sdiag = num.matrix(2, 2).set(0, 0, sv.get(0, 0)).set(1, 1, sv.get(1, 0));
+num.assert_close(us.mul(sdiag).mul(vs.transpose()).sub(a32).norm(), 0.0, 0.000000000001);
+num.assert_close(us.transpose().mul(us).sub(num.identity(2)).norm(), 0.0, 0.000000000001);
+# Cholesky: [4 2; 2 3] = L L^T with L = [2 0; 1 sqrt 2]
+let lchol = num.parse("4 2; 2 3").cholesky();
+num.assert_close(lchol.get(0, 0), 2.0, 0.000000000001);
+num.assert_close(lchol.get(1, 0), 1.0, 0.000000000001);
+num.assert_close(lchol.get(1, 1), sqrt(2.0), 0.000000000001);
+num.assert_close(lchol.get(0, 1), 0.0, 0.0);
+# block slicing and sorting
+let blk = num.parse("1 2 3; 4 5 6; 7 8 9").block(1, 1, 2, 2);
+num.assert_close(blk.get(0, 0), 5.0, 0.0);
+num.assert_close(blk.get(1, 1), 9.0, 0.0);
+num.assert_close(float(blk.rows() * 10 + blk.cols()), 22.0, 0.0);
+let srt = num.parse("3 1; 2 0").sorted();
+num.assert_close(srt.get(0, 0), 0.0, 0.0);
+num.assert_close(srt.get(3, 0), 3.0, 0.0);
+num.assert_close(float(srt.rows()), 4.0, 0.0);
+# the Nelder-Mead path ends at the minimiser with the function value in the last column, never increasing
+let path = num.minimize_path("(x-3)^2 + (y+1)^2 + 2", "x y", num.parse("0; 0"));
+let last = path.rows() - 1;
+num.assert_close(path.get(last, 0), 3.0, 0.0001);
+num.assert_close(path.get(last, 1), -1.0, 0.0001);
+num.assert_close(path.get(last, 2), 2.0, 0.0000001);
+num.assert_close(min(path.get(0, 2), path.get(last, 2)), path.get(last, 2), 0.0);
+num.assert_close(path.get(0, 0), 0.0, 0.0);   # the first row is the start point
+# integrate_tol: a loose tolerance still gives the answer for a smooth integrand
+num.assert_close(num.integrate_tol("sin(x)", "x", 0.0, pi, 0.001), 2.0, 0.001);
+# load_csv skips a header line that is not numbers ("t,prey")
+let hdr = num.load_csv("build/examples/header.csv");
+num.assert_close(float(hdr.rows() * 10 + hdr.cols()), 22.0, 0.0);
+num.assert_close(hdr.get(1, 1), 4.0, 0.0);
 end _dsl_
 savedsl(p, out);

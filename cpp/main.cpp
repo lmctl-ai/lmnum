@@ -114,6 +114,11 @@ void need_dims(int64_t r, int64_t c, const char *who) {
 void need_finite(const Mat &m, const char *who) {
   if (!m.allFinite()) throw dslvm::Error(std::string(who) + ": matrix contains NaN or infinity");
 }
+// Expression results: NaN or infinity would otherwise travel on silently into the script.
+double finite_result(double v, const char *who) {
+  if (!std::isfinite(v)) throw dslvm::Error(std::string(who) + ": result is " + (std::isnan(v) ? "NaN" : "infinite") + " (domain error in the expression?)");
+  return v;
+}
 void need_symmetric(const Mat &m, const char *who) {
   square(m, who);
   need_finite(m, who);
@@ -213,14 +218,18 @@ void register_host(dslvm::Registry &r, Host &h) {
     if (!f) throw dslvm::Error("Num.load_csv: cannot open " + a[0].s);
     std::stringstream ss; ss << f.rdbuf();
     std::string t = ss.str();
-    // skip a header row that does not start with a number
+    // Skip one header row: a first line that does not parse as numbers ("t,prey", "# comment", "x y").
     size_t nl = t.find('\n');
-    if (nl != std::string::npos) { char c = t.empty() ? 0 : t[0]; if (std::isalpha((unsigned char)c)) t = t.substr(nl + 1); }
+    if (nl != std::string::npos) {
+      bool header = false;
+      try { parse_matrix(t.substr(0, nl)); } catch (const std::exception &) { header = true; }
+      if (header) t = t.substr(nl + 1);
+    }
     return h.mat(parse_matrix(t));
   });
   method(r, "Num", "eval", {"string"}, "float", [](void *, Args &a) {
     lmnum::Expr e(a[0].s, {});
-    return Value::real(e.eval(nullptr));
+    return Value::real(finite_result(e.eval(nullptr), "Num.eval"));
   });
   method(r, "Num", "func", {"string", "string"}, "Func", [&h](void *, Args &a) {
     auto names = lmnum::split_names(a[1].s);
@@ -240,11 +249,20 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Num", "integrate", {"string", "string", "float", "float"}, "float", [](void *, Args &a) {
     return Value::real(lmnum::integrate(a[0].s, a[1].s, a[2].f, a[3].f, 1e-10));
   });
+  method(r, "Num", "integrate_tol", {"string", "string", "float", "float", "float"}, "float", [](void *, Args &a) {
+    return Value::real(lmnum::integrate(a[0].s, a[1].s, a[2].f, a[3].f, a[4].f));
+  });
   method(r, "Num", "root", {"string", "string", "float", "float"}, "float", [](void *, Args &a) {
     return Value::real(lmnum::find_root(a[0].s, a[1].s, a[2].f, a[3].f, 1e-12));
   });
   method(r, "Num", "minimize", {"string", "string", "Matrix"}, "Matrix", [&h](void *, Args &a) {
     return h.mat(lmnum::minimize(a[0].s, a[1].s, arg_mat(a[2]), 1e-12, 20000));
+  });
+  // The Nelder-Mead iterations as rows (x_best..., f_best): one row per iteration, the last is the minimiser.
+  method(r, "Num", "minimize_path", {"string", "string", "Matrix"}, "Matrix", [&h](void *, Args &a) {
+    Mat path;
+    lmnum::minimize(a[0].s, a[1].s, arg_mat(a[2]), 1e-12, 20000, &path);
+    return h.mat(path);
   });
   method(r, "Num", "polyfit", {"Matrix", "Matrix", "int"}, "Matrix", [&h](void *, Args &a) {
     if (a[2].i < 0 || a[2].i > 1000) throw dslvm::Error("Num.polyfit: degree must be 0..1000");
@@ -317,6 +335,34 @@ void register_host(dslvm::Registry &r, Host &h) {
     return h.mat(s.eigenvectors());
   });
   method(r, "Matrix", "svd_values", {}, "Matrix", [&h](void *p, Args &) { return h.mat(Mat(M(p).bdcSvd().singularValues())); });
+  // Thin SVD factors: A = U diag(s) V^T with U m x k, V n x k, k = min(m, n); columns ordered like svd_values.
+  method(r, "Matrix", "svd_u", {}, "Matrix", [&h](void *p, Args &) {
+    need_finite(M(p), "Matrix.svd_u");
+    return h.mat(Mat(M(p).bdcSvd(Eigen::ComputeThinU).matrixU()));
+  });
+  method(r, "Matrix", "svd_v", {}, "Matrix", [&h](void *p, Args &) {
+    need_finite(M(p), "Matrix.svd_v");
+    return h.mat(Mat(M(p).bdcSvd(Eigen::ComputeThinV).matrixV()));
+  });
+  method(r, "Matrix", "cholesky", {}, "Matrix", [&h](void *p, Args &) {
+    need_symmetric(M(p), "Matrix.cholesky");
+    Eigen::LLT<Mat> llt(M(p));
+    if (llt.info() != Eigen::Success) throw dslvm::Error("Matrix.cholesky: matrix is not positive definite");
+    return h.mat(Mat(llt.matrixL()));
+  });
+  method(r, "Matrix", "block", {"int", "int", "int", "int"}, "Matrix", [&h](void *p, Args &a) {
+    if (a[2].i < 0 || a[3].i < 0 || a[0].i < 0 || a[1].i < 0 || a[0].i + a[2].i > M(p).rows() || a[1].i + a[3].i > M(p).cols())
+      throw dslvm::Error("Matrix.block: rows " + std::to_string(a[0].i) + ".." + std::to_string(a[0].i + a[2].i - 1) + ", cols " +
+                         std::to_string(a[1].i) + ".." + std::to_string(a[1].i + a[3].i - 1) + " outside " + std::to_string(M(p).rows()) +
+                         "x" + std::to_string(M(p).cols()));
+    return h.mat(Mat(M(p).block(a[0].i, a[1].i, a[2].i, a[3].i)));
+  });
+  method(r, "Matrix", "sorted", {}, "Matrix", [&h](void *p, Args &) {
+    need_finite(M(p), "Matrix.sorted");
+    Eigen::VectorXd v = M(p).reshaped();
+    std::sort(v.begin(), v.end());
+    return h.mat(Mat(v));
+  });
   method(r, "Matrix", "col", {"int"}, "Matrix", [&h](void *p, Args &a) { need_index(M(p), 0, a[0].i, "Matrix.col"); return h.mat(M(p).col(a[0].i)); });
   method(r, "Matrix", "row", {"int"}, "Matrix", [&h](void *p, Args &a) { need_index(M(p), a[0].i, 0, "Matrix.row"); return h.mat(M(p).row(a[0].i)); });
   method(r, "Matrix", "hstack", {"Matrix"}, "Matrix", [&h](void *p, Args &a) {
@@ -340,7 +386,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     auto *f = static_cast<Func *>(a[0].obj);
     if (f->nvars != 1) throw dslvm::Error("Matrix.map: the function must have exactly one variable");
     Mat m = M(p);
-    for (int i = 0; i < m.rows(); i++) for (int j = 0; j < m.cols(); j++) { double x = m(i, j); m(i, j) = f->e->eval(&x); }
+    for (int i = 0; i < m.rows(); i++) for (int j = 0; j < m.cols(); j++) { double x = m(i, j); m(i, j) = finite_result(f->e->eval(&x), "Matrix.map"); }
     return h.mat(m);
   });
   method(r, "Matrix", "to_text", {}, "string", [](void *p, Args &) { return Value::string(to_text(M(p))); });
@@ -361,12 +407,12 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Func", "eval", {"float"}, "float", [](void *p, Args &a) {
     auto *f = static_cast<Func *>(p);
     if (f->nvars != 1) throw dslvm::Error("Func.eval: the function has " + std::to_string(f->nvars) + " variables; use eval2 for two");
-    double x = a[0].f; return Value::real(f->e->eval(&x));
+    double x = a[0].f; return Value::real(finite_result(f->e->eval(&x), "Func.eval"));
   });
   method(r, "Func", "eval2", {"float", "float"}, "float", [](void *p, Args &a) {
     auto *f = static_cast<Func *>(p);
     if (f->nvars != 2) throw dslvm::Error("Func.eval2: the function does not have exactly two variables");
-    double x[2] = {a[0].f, a[1].f}; return Value::real(f->e->eval(x));
+    double x[2] = {a[0].f, a[1].f}; return Value::real(finite_result(f->e->eval(x), "Func.eval2"));
   });
 
   // ---------------------------------------------------------------- Ode

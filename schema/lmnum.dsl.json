@@ -111,6 +111,18 @@
             "returns": "float"
           }
         ],
+        "integrate_tol": [
+          {
+            "params": [
+              "string",
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
         "root": [
           {
             "params": [
@@ -123,6 +135,16 @@
           }
         ],
         "minimize": [
+          {
+            "params": [
+              "string",
+              "string",
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "minimize_path": [
           {
             "params": [
               "string",
@@ -333,6 +355,41 @@
           }
         ],
         "svd_values": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "svd_u": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "svd_v": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "cholesky": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "block": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "sorted": [
           {
             "params": [],
             "returns": "Matrix"

@@ -1,0 +1,95 @@
+# Two-body orbits (G M = 1). CVODE integrates x'' = -x/r^3 from apoapsis for four eccentricities; energy
+# E = v^2/2 - 1/r = -1/(2a) and angular momentum L = x vy - y vx = sqrt(a (1 - e^2)) are conserved to 1e-8 over
+# ten orbits of the e = 0.8 ellipse, and Kepler's third law T = 2 pi a^(3/2) is measured from the time of the
+# next apoapsis for a = 0.5 .. 2 (within 0.2%). lmplot draws images/orbital.png: orbits, conservation errors, T^2 vs a^3.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let pi = 3.141592653589793;
+fn orbit(a: float, e: float) -> Ode {
+  let sys = num.ode(4).rhs(0, "y2").rhs(1, "y3").rhs(2, "-y0/(y0*y0 + y1*y1)^1.5").rhs(3, "-y1/(y0*y0 + y1*y1)^1.5");
+  sys.init(0, a * (1.0 + e)).init(1, 0.0).init(2, 0.0).init(3, sqrt((1.0 - e) / (a * (1.0 + e))));
+  sys.tol(0.000000000001, 0.00000000000001);
+  return sys;
+}
+# (a) four orbits with a = 1, one period each, sampled on a common grid
+let shapes = num.matrix(401, 8);
+for (c in range(0, 4)) {
+  let e = 0.0;
+  if (c == 1) { e = 0.3; }
+  if (c == 2) { e = 0.6; }
+  if (c == 3) { e = 0.8; }
+  let sol = orbit(1.0, e).solve(0.0, 2.0 * pi, 401);
+  for (i in range(0, 401)) { shapes.set(i, 2 * c, sol.get(i, 1)).set(i, 2 * c + 1, sol.get(i, 2)); }
+  # after exactly one period the body is back at apoapsis
+  num.assert_close(sol.get(400, 1), 1.0 + e, 0.0000001);
+  num.assert_close(sol.get(400, 2), 0.0, 0.0000001);
+}
+shapes.save_csv("data/orbit_shapes.csv");
+# (b) conservation over ten orbits of the e = 0.8 ellipse
+let e = 0.8;
+let sol = orbit(1.0, e).solve(0.0, 20.0 * pi, 4001);
+let cons = num.matrix(4001, 3);
+let worst_e = 0.0;
+let worst_l = 0.0;
+for (i in range(0, 4001)) {
+  let x = sol.get(i, 1);
+  let y = sol.get(i, 2);
+  let vx = sol.get(i, 3);
+  let vy = sol.get(i, 4);
+  let energy = 0.5 * (vx * vx + vy * vy) - 1.0 / sqrt(x * x + y * y);
+  let ang = x * vy - y * vx;
+  let de = abs(energy + 0.5) / 0.5;
+  let dl = abs(ang - sqrt(1.0 - e * e)) / sqrt(1.0 - e * e);
+  worst_e = max(worst_e, de);
+  worst_l = max(worst_l, dl);
+  cons.set(i, 0, sol.get(i, 0) / (2.0 * pi)).set(i, 1, max(de, 0.0000000000000001)).set(i, 2, max(dl, 0.0000000000000001));
+}
+num.print("relative drift over 10 orbits: energy " + str(worst_e) + ", angular momentum " + str(worst_l));
+num.assert_close(worst_e, 0.0, 0.00000001);
+num.assert_close(worst_l, 0.0, 0.00000001);
+cons.save_csv("data/orbit_conservation.csv");
+# (c) Kepler's third law: the period is the time of the next apoapsis (largest r after half an orbit)
+let kepler = num.matrix(4, 3);                                # a, measured T, 2 pi a^1.5
+for (k in range(0, 4)) {
+  let a = 0.5 * float(k + 1);
+  let t_end = 1.3 * 2.0 * pi * pow(a, 1.5);
+  let s = orbit(a, 0.6).solve(0.0, t_end, 20001);
+  let best_r = 0.0;
+  let best_t = 0.0;
+  for (i in range(10000, 20001)) {
+    let rr = sqrt(s.get(i, 1) * s.get(i, 1) + s.get(i, 2) * s.get(i, 2));
+    if (rr > best_r) { best_r = rr; best_t = s.get(i, 0); }
+  }
+  let exact = 2.0 * pi * pow(a, 1.5);
+  num.assert_close(best_t, exact, 0.002 * exact);
+  kepler.set(k, 0, a).set(k, 1, best_t).set(k, 2, exact);
+}
+kepler.save_csv("data/orbit_kepler.csv");
+end _dsl_
+savedsl(sim, "data/orbital-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/orbital-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/orbital.png", 1100, 420);
+plot.cmd("set multiplot layout 1,3 title 'Two-body orbits with lmnum CVODE: shapes, conservation laws, Kepler III' font ',13'");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
+plot.cmd("set xlabel 'x [a]'; set ylabel 'y [a]'; set key bottom center horizontal maxrows 2 box opaque font ',8' samplen 1");
+plot.cmd("set xrange [-1.9:1.9]; set yrange [-2.4:1.85]");
+plot.cmd("plot 'data/orbit_shapes.csv' u 1:2 w l lw 2 lc rgb '#1f77b4' t 'e = 0', '' u 3:4 w l lw 2 lc rgb '#2ca02c' t 'e = 0.3', '' u 5:6 w l lw 2 lc rgb '#ff7f0e' t 'e = 0.6', '' u 7:8 w l lw 2 lc rgb '#d62728' t 'e = 0.8', '+' u (0):(0) every ::0::0 w p pt 7 ps 2.5 lc rgb '#f1c40f' t 'focus'");
+plot.cmd("set logscale y; set format y '10^{%L}'; set yrange [1e-16:1e-8]; set xrange [0:10]; set ytics 1e-16, 100, 1e-8");
+plot.cmd("set xlabel 'orbits (e = 0.8)'; set ylabel 'relative drift'; set key bottom right");
+plot.cmd("plot 'data/orbit_conservation.csv' u 1:2 w l lw 1.5 lc rgb '#d62728' t 'energy', '' u 1:3 w l lw 1.5 lc rgb '#1f77b4' t 'angular momentum'");
+plot.cmd("unset logscale; set format y '%g'; set xrange [0:8.5]; set yrange [0:330]; set ytics autofreq");
+plot.cmd("set xlabel 'a^3'; set ylabel 'T^2'; set key at screen 0.75, 0.815 left top");
+plot.cmd("plot 4*pi**2*x w l lw 2 lc rgb '#08519c' t 'T^2 = 4 pi^2 a^3', 'data/orbit_kepler.csv' u ($1**3):($2**2) w p pt 6 ps 1.8 lw 2 lc rgb '#d62728' t 'measured (next apoapsis)'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/orbital-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/orbital-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/orbital.png");

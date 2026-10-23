@@ -1,0 +1,103 @@
+# The wave equation u_tt = c^2 u_xx on a string with fixed ends, by the method of lines: 199 interior points,
+# u and u_t as 398 first-order ODEs integrated by CVODE. A Gaussian bump released from rest splits into two
+# half-height pulses travelling at speed c (d'Alembert: u = f(x - ct)/2 + f(x + ct)/2), which reflect from the
+# fixed ends with inverted sign and recombine. The script checks the d'Alembert solution at t = 0.1, before the
+# first reflection (max error 2e-3 for the second-order grid) and that the energy (1/2) int u_t^2 + c^2 u_x^2 dx stays
+# constant to 1e-3. lmplot draws images/wave_equation.png: snapshots on the left, the x-t diagram on the right.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let m = 199;                                       # interior points on [0, 1], h = 1/200
+let h = 1.0 / 200.0;
+let c = 1.0;
+let sys = num.ode(2 * m);                          # y0..y(m-1) = u, ym..y(2m-1) = u_t
+sys.param("k", c * c / (h * h));
+for (i in range(0, m)) {
+  let left = "0";
+  let right = "0";
+  if (i > 0) { left = "y" + str(i - 1); }
+  if (i < m - 1) { right = "y" + str(i + 1); }
+  sys.rhs(i, "y" + str(m + i));
+  sys.rhs(m + i, "k*(" + left + " - 2*y" + str(i) + " + " + right + ")");
+  let x = float(i + 1) * h;
+  sys.init(i, pow(2.718281828459045, -((x - 0.3) * (x - 0.3)) / 0.005));   # Gaussian bump, width 0.05, at rest
+  sys.init(m + i, 0.0);
+}
+sys.tol(0.00000001, 0.0000000001);
+let steps = 81;                                    # t = 0 .. 2 (one full round trip at c = 1)
+let sol = sys.solve(0.0, 2.0, steps);
+# x-t table for the heat map, and the energy at each time
+let field = num.matrix(steps * (m + 2), 3);
+let e0 = 0.0;
+let worst_e = 0.0;
+for (k in range(0, steps)) {
+  let energy = 0.0;
+  for (i in range(0, m + 2)) {
+    let u = 0.0;
+    if (i > 0) { if (i < m + 1) { u = sol.get(k, i); } }
+    field.set(k * (m + 2) + i, 0, float(i) * h).set(k * (m + 2) + i, 1, sol.get(k, 0)).set(k * (m + 2) + i, 2, u);
+    if (i < m + 1) {
+      let un = 0.0;
+      if (i < m) { un = sol.get(k, i + 1); }
+      let ut = 0.0;
+      if (i > 0) { ut = sol.get(k, m + i); }
+      energy = energy + 0.5 * h * (ut * ut + c * c * (un - u) * (un - u) / (h * h));
+    }
+  }
+  if (k == 0) { e0 = energy; }
+  worst_e = max(worst_e, abs(energy - e0) / e0);
+}
+num.print("relative energy drift over one round trip: " + str(worst_e));
+num.assert_close(worst_e, 0.0, 0.001);
+field.save_csv("data/wave_field.csv");
+# d'Alembert before the first reflection: t = 0.1 (snapshot 4), pulses at x = 0.2 and 0.4
+let worst = 0.0;
+for (i in range(0, m)) {
+  let x = float(i + 1) * h;
+  let exact = 0.5 * pow(2.718281828459045, -((x - 0.2) * (x - 0.2)) / 0.005) + 0.5 * pow(2.718281828459045, -((x - 0.4) * (x - 0.4)) / 0.005);
+  worst = max(worst, abs(sol.get(4, i + 1) - exact));
+}
+num.print("max |numerical - d'Alembert| at t = 0.1: " + str(worst));
+num.assert_close(worst, 0.0, 0.002);
+# snapshots for the left panel: t = 0, 0.2, 0.5, 0.8, 1.0, 1.3
+let snaps = num.matrix(m + 2, 7);
+for (i in range(0, m + 2)) {
+  snaps.set(i, 0, float(i) * h);
+  for (q in range(0, 6)) {
+    let k = 0;
+    if (q == 1) { k = 8; }
+    if (q == 2) { k = 20; }
+    if (q == 3) { k = 32; }
+    if (q == 4) { k = 40; }
+    if (q == 5) { k = 52; }
+    let u = 0.0;
+    if (i > 0) { if (i < m + 1) { u = sol.get(k, i); } }
+    snaps.set(i, 1 + q, u);
+  }
+}
+snaps.save_csv("data/wave_snaps.csv");
+end _dsl_
+savedsl(sim, "data/wave_equation-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/wave_equation-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/wave_equation.png", 1000, 480);
+plot.cmd("set multiplot layout 1,2 title 'Wave equation on a fixed string (lmnum CVODE, method of lines): a bump splits, travels, reflects' font ',13'");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set xlabel 'x'; set ylabel 'u + offset'; set xrange [0:1]; set yrange [-0.9:6.7]; unset ytics");
+plot.cmd("set key top right box opaque font ',9' samplen 1.5 title 't ='");
+plot.cmd("set palette defined (0 '#2166ac', 1 '#b2182b'); unset colorbox");
+plot.cmd("plot for [q=0:5] 'data/wave_snaps.csv' u 1:(column(q+2) + 1.1*(5-q)) w l lw 2 lc palette frac q/5.0 t sprintf('%.1f', q==0?0:q==1?0.2:q==2?0.5:q==3?0.8:q==4?1.0:1.3), for [q=0:5] 1.1*(5-q) w l lc rgb '#bbbbbb' dt 3 notitle");
+plot.cmd("set ytics; set ylabel 't'; set yrange [0:2]; set cbrange [-1:1]; set colorbox; set cblabel 'u'");
+plot.cmd("set palette defined (0 '#b2182b', 0.5 '#f7f7f7', 1 '#2166ac'); set key off");
+plot.cmd("set label 1 'reflection inverts the pulse' at 0.02, 1.9 front font ',9'");
+plot.cmd("plot 'data/wave_field.csv' u 1:2:3 w image notitle");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/wave_equation-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/wave_equation-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/wave_equation.png");

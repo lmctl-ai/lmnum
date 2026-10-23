@@ -1,0 +1,89 @@
+# A power spectrum without an FFT. A 200-sample signal at 100 Hz holds tones at 5 Hz (amplitude 1), 12.25 Hz (0.5)
+# and 30 Hz (0.25) plus seeded noise. The discrete Fourier transform is two matrix products: C x and S x with
+# C_kn = cos(2 pi k n / N), S_kn = sin(2 pi k n / N) built in lmscript loops, so lmnum's `mul` does the transform.
+# The three peaks land in the right bins with the right heights (asserted), Parseval's identity holds to 1e-9, and
+# the 12.25 Hz tone, which falls between the 0.5 Hz bins, leaks into its neighbours and loses height. lmplot draws images/spectrum_dft.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let n = 200;
+let fs = 100.0;
+let pi = 3.141592653589793;
+let x = num.matrix(n, 1);
+let noise = num.normal(n, 1, 3).scale(0.1);
+for (i in range(0, n)) {
+  let t = float(i) / fs;
+  x.set(i, 0, sin(2.0 * pi * 5.0 * t) + 0.5 * sin(2.0 * pi * 12.25 * t) + 0.25 * cos(2.0 * pi * 30.0 * t) + noise.get(i, 0));
+}
+let half = n / 2 + 1;
+let cm = num.matrix(half, n);
+let sm = num.matrix(half, n);
+for (k in range(0, half)) {
+  for (i in range(0, n)) {
+    cm.set(k, i, cos(2.0 * pi * float(k * i) / float(n)));
+    sm.set(k, i, sin(2.0 * pi * float(k * i) / float(n)));
+  }
+}
+let re = cm.mul(x);
+let im = sm.mul(x);
+let spec = num.matrix(half, 3);                     # frequency, amplitude (2|X_k|/N), power
+let total_power = 0.0;
+for (k in range(0, half)) {
+  let p = re.get(k, 0) * re.get(k, 0) + im.get(k, 0) * im.get(k, 0);
+  let amp = 2.0 * sqrt(p) / float(n);
+  if (k == 0) { amp = amp / 2.0; }
+  spec.set(k, 0, float(k) * fs / float(n)).set(k, 1, amp).set(k, 2, p);
+  let weight = 2.0;
+  if (k == 0) { weight = 1.0; }
+  if (k == half - 1) { weight = 1.0; }
+  total_power = total_power + weight * p;
+}
+# Parseval: sum |x|^2 = (1/N) sum |X_k|^2 over all N bins (the one-sided spectrum counts k and N - k)
+num.assert_close(x.transpose().mul(x).get(0, 0), total_power / float(n), 0.000000001);
+let signal = num.matrix(n, 2);
+for (i in range(0, n)) { signal.set(i, 0, float(i) / fs).set(i, 1, x.get(i, 0)); }
+signal.save_csv("data/dft_signal.csv");
+spec.save_csv("data/dft_spectrum.csv");
+# tallest three bins
+let best1 = 0;
+let best2 = 0;
+let best3 = 0;
+for (k in range(1, half)) {
+  if (spec.get(k, 1) > spec.get(best1, 1)) { best1 = k; }
+}
+for (k in range(1, half)) {
+  if (abs(k - best1) > 2) { if (spec.get(k, 1) > spec.get(best2, 1)) { best2 = k; } }
+}
+for (k in range(1, half)) {
+  if (abs(k - best1) > 2) { if (abs(k - best2) > 2) { if (spec.get(k, 1) > spec.get(best3, 1)) { best3 = k; } } }
+}
+num.print("peaks at " + str(spec.get(best1, 0)) + " Hz (" + str(spec.get(best1, 1)) + "), " + str(spec.get(best2, 0)) + " Hz (" + str(spec.get(best2, 1)) + "), " + str(spec.get(best3, 0)) + " Hz (" + str(spec.get(best3, 1)) + ")");
+num.assert_close(spec.get(best1, 0), 5.0, 0.0);     # bins are 0.5 Hz apart: 5 and 30 Hz are exact bins
+num.assert_close(spec.get(best3, 0), 30.0, 0.0);
+num.assert_close(spec.get(best2, 0), 12.25, 0.25);  # the off-bin tone shows in bin 12.0 or 12.5
+num.assert_close(spec.get(best1, 1), 1.0, 0.05);    # noise of 0.1 rms spreads over 100 bins
+num.assert_close(spec.get(best3, 1), 0.25, 0.05);
+num.assert_close(spec.get(best2, 1), 0.5, 0.2);     # leakage lowers an off-bin tone by up to 36%
+end _dsl_
+savedsl(sim, "data/spectrum_dft-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/spectrum_dft-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/spectrum_dft.png", 900, 620);
+plot.cmd("set multiplot layout 2,1 title 'Discrete Fourier transform as a matrix product (lmnum): three tones in noise' font ',13'");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset key");
+plot.cmd("set xlabel 'time [s]'; set ylabel 'signal'; set xrange [0:2]");
+plot.cmd("plot 'data/dft_signal.csv' u 1:2 w l lw 1.2 lc rgb '#1f77b4'");
+plot.cmd("set xlabel 'frequency [Hz]'; set ylabel 'amplitude'; set xrange [0:50]; set yrange [0:1.15]");
+plot.cmd("set label 1 '5 Hz, 1.0' at 6, 1.02 font ',9'; set label 2 '12.25 Hz, 0.5: between bins, leaks into both' at 13.5, 0.5 font ',9'; set label 3 '30 Hz, 0.25' at 31, 0.3 font ',9'");
+plot.cmd("plot 'data/dft_spectrum.csv' u 1:2 w impulses lw 2 lc rgb '#d62728', '' u 1:2 w p pt 7 ps 0.5 lc rgb '#d62728'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/spectrum_dft-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/spectrum_dft-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/spectrum_dft.png");

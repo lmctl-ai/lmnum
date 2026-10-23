@@ -55,6 +55,7 @@ bool same_sign(double p, double q) { return (p > 0 && q > 0) || (p < 0 && q < 0)
 
 double integrate(const std::string &expr, const std::string &var, double a, double b, double tol) {
   if (!std::isfinite(a) || !std::isfinite(b)) throw std::runtime_error("integrate: bounds must be finite");
+  if (!(tol > 0) || !std::isfinite(tol)) throw std::runtime_error("integrate: tolerance must be a positive finite number");
   Expr f(expr, {var});
   double x[1];
   std::vector<Seg> segs{gk15(f, a, b, x)};
@@ -109,7 +110,7 @@ double find_root(const std::string &expr, const std::string &var, double a, doub
   throw std::runtime_error("root: no convergence");
 }
 
-Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, double tol, int max_iter) {
+Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, double tol, int max_iter, Mat *path) {
   auto names = split_names(vars);
   int n = (int)names.size();
   if (n == 0) throw std::runtime_error("minimize: no variables");
@@ -125,12 +126,26 @@ Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, do
   std::vector<double> fv(n + 1);
   for (int i = 0; i <= n; i++) fv[i] = f(p[i]);
   std::vector<int> idx(n + 1);
+  std::vector<double> trace;  // rows of (x_best, f_best): the start point, then one per iteration
+  if (path) {
+    for (int i = 0; i < n; i++) trace.push_back(start(i));
+    trace.push_back(fv[0]);
+  }
   bool converged = false;
   for (int it = 0; it < max_iter; it++) {
     for (int i = 0; i <= n; i++) idx[i] = i;
     std::sort(idx.begin(), idx.end(), [&](int a, int b) { return fv[a] < fv[b]; });
     int lo = idx[0], hi = idx[n], nh = idx[n - 1];
-    if (std::fabs(fv[hi] - fv[lo]) <= tol * (std::fabs(fv[hi]) + std::fabs(fv[lo]) + 1e-30)) { converged = true; break; }
+    if (path) {
+      for (int i = 0; i < n; i++) trace.push_back(p[lo](i));
+      trace.push_back(fv[lo]);
+    }
+    // Converged when the function values agree (relative, with a floor so a minimum at exactly 0 is reachable) or
+    // when the simplex has collapsed to a point.
+    if (std::fabs(fv[hi] - fv[lo]) <= tol * (std::fabs(fv[hi]) + std::fabs(fv[lo]) + 1e-10)) { converged = true; break; }
+    double diameter = 0;
+    for (int i = 0; i <= n; i++) diameter = std::max(diameter, (p[i] - p[lo]).norm());
+    if (diameter <= 1e-9 * (1 + p[lo].norm())) { converged = true; break; }
     Eigen::VectorXd c = Eigen::VectorXd::Zero(n);
     for (int i = 0; i <= n; i++) if (i != hi) c += p[i];
     c /= n;
@@ -151,10 +166,24 @@ Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, do
   if (!converged) throw std::runtime_error("minimize: no convergence in " + std::to_string(max_iter) + " iterations");
   int best = (int)(std::min_element(fv.begin(), fv.end()) - fv.begin());
   if (!std::isfinite(fv[best])) throw std::runtime_error("minimize: the function is not finite near the start point");
+  if (path) {
+    Eigen::Index rows = (Eigen::Index)trace.size() / (n + 1);
+    *path = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(trace.data(), rows, n + 1);
+  }
   return Mat(p[best]);
 }
 
+namespace {
+void need_vector(const Mat &m, const char *who, const char *what) {
+  if (m.rows() != 1 && m.cols() != 1)
+    throw std::runtime_error(std::string(who) + ": " + what + " must be a row or column vector, not " + std::to_string(m.rows()) + "x" +
+                             std::to_string(m.cols()));
+}
+}  // namespace
+
 Mat polyfit(const Mat &x, const Mat &y, int degree) {
+  need_vector(x, "polyfit", "x");
+  need_vector(y, "polyfit", "y");
   if (x.size() != y.size() || x.size() == 0) throw std::runtime_error("polyfit: x and y must be non-empty and the same length");
   if (degree < 0 || degree + 1 > x.size()) throw std::runtime_error("polyfit: degree needs at least degree+1 points");
   Mat A(x.size(), degree + 1);
@@ -169,6 +198,8 @@ double polyval(const Mat &c, double x) {
 }
 
 double interp1(const Mat &x, const Mat &y, double at) {
+  need_vector(x, "interp", "x");
+  need_vector(y, "interp", "y");
   int n = (int)x.size();
   if (n < 2 || y.size() != n) throw std::runtime_error("interp: need matching x and y with at least 2 points");
   for (int i = 1; i < n; i++)

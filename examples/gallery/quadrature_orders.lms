@@ -1,0 +1,82 @@
+# Convergence orders of quadrature rules. Midpoint, trapezoid and Simpson sums are written as lmscript loops and
+# halved in step size nine times on a smooth integrand (int_0^1 e^x dx = e - 1) and on one with an endpoint
+# singularity (int_0^1 1/sqrt(x) dx = 2). The error slopes on the log-log plot are the textbook orders 2, 2 and 4
+# for the smooth case (until roundoff at 1e-15 stops Simpson); on the singular one every rule drops to order 1/2
+# and only lmnum's adaptive Gauss-Kronrod `integrate` (dashed line) reaches 1e-7. Each slope is asserted. lmplot draws images/quadrature_orders.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let lg2 = num.func("log(x)/log(2)", "x");
+fn smooth(x: float) -> float { return pow(2.718281828459045, x); }
+fn singular(x: float) -> float { return 1.0 / sqrt(x); }
+# rows: n, midpoint error, trapezoid error, Simpson error (one table per integrand)
+fn errors(which: int, exact: float) -> Matrix {
+  let t = num.matrix(10, 4);
+  let n = 4;
+  for (k in range(0, 10)) {
+    let h = 1.0 / float(n);
+    let mid = 0.0;
+    let trap = 0.0;
+    let simp = 0.0;
+    for (i in range(0, n)) {
+      let xm = (float(i) + 0.5) * h;
+      let xr = float(i + 1) * h;
+      let fm = 0.0;
+      let fr = 0.0;
+      if (which == 0) { fm = smooth(xm); fr = smooth(xr); } else { fm = singular(xm); fr = singular(xr); }
+      mid = mid + fm;
+      # the singular integrand is infinite at x = 0: the left-end sample is dropped there (its weight is h/2)
+      if (i < n - 1) { trap = trap + fr; } else { trap = trap + 0.5 * fr; }
+      simp = simp + 4.0 * fm + 2.0 * fr;
+    }
+    if (which == 0) { trap = trap + 0.5 * smooth(0.0); simp = simp + smooth(0.0) - smooth(1.0); } else { simp = simp - singular(1.0); }
+    t.set(k, 0, float(n)).set(k, 1, abs(mid * h - exact)).set(k, 2, abs(trap * h - exact)).set(k, 3, abs(simp * h / 6.0 - exact));
+    n = n * 2;
+  }
+  return t;
+}
+let es = errors(0, 1.718281828459045);
+let ez = errors(1, 2.0);
+es.save_csv("data/quad_smooth.csv");
+ez.save_csv("data/quad_singular.csv");
+# orders from the last halving: log2(e(n) / e(2n))
+let o_mid = lg2.eval(es.get(3, 1) / es.get(4, 1));
+let o_trap = lg2.eval(es.get(3, 2) / es.get(4, 2));
+let o_simp = lg2.eval(es.get(3, 3) / es.get(4, 3));
+let o_sing = lg2.eval(ez.get(8, 3) / ez.get(9, 3));
+num.print("orders: midpoint " + str(o_mid) + ", trapezoid " + str(o_trap) + ", Simpson " + str(o_simp) + "; Simpson on 1/sqrt(x): " + str(o_sing));
+num.assert_close(o_mid, 2.0, 0.05);
+num.assert_close(o_trap, 2.0, 0.05);
+num.assert_close(o_simp, 4.0, 0.1);
+num.assert_close(o_sing, 0.5, 0.05);
+# adaptive Gauss-Kronrod reaches the tolerance on both
+let gk_smooth = abs(num.integrate("exp(x)", "x", 0.0, 1.0) - 1.718281828459045);
+let gk_sing = abs(num.integrate("1/sqrt(x)", "x", 0.0, 1.0) - 2.0);
+num.print("Gauss-Kronrod errors: " + str(gk_smooth) + " and " + str(gk_sing));
+num.assert_close(gk_smooth, 0.0, 0.000000001);
+num.assert_close(gk_sing, 0.0, 0.0000001);
+num.matrix(1, 2).set(0, 0, max(gk_smooth, 0.0000000000000001)).set(0, 1, max(gk_sing, 0.0000000000000001)).save_csv("data/quad_gk.csv");
+end _dsl_
+savedsl(sim, "data/quadrature_orders-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/quadrature_orders-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/quadrature_orders.png", 1000, 480);
+plot.cmd("stats 'data/quad_gk.csv' u 1:2 nooutput; gks = STATS_min_x; gkz = STATS_min_y");
+plot.cmd("set multiplot layout 1,2 title 'Quadrature error against the number of panels (lmnum, loops in lmscript)' font ',13'");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set logscale xy; set format y '10^{%L}'; set xtics 4, 4, 2048");
+plot.cmd("set xlabel 'panels n'; set ylabel '|error|'; set key bottom left box opaque font ',9' samplen 1.5");
+plot.cmd("set title 'smooth: e^x on [0,1] = e - 1' font ',11'; set yrange [1e-17:1]");
+plot.cmd("plot 'data/quad_smooth.csv' u 1:2 w lp pt 7 lw 2 lc rgb '#1f77b4' t 'midpoint (order 2)', '' u 1:3 w lp pt 5 lw 2 lc rgb '#2ca02c' t 'trapezoid (order 2)', '' u 1:4 w lp pt 9 lw 2 lc rgb '#d62728' t 'Simpson (order 4)', 0.5/x**2 w l dt 3 lc rgb '#555555' t 'n^{-2}', 0.5/x**4 w l dt 3 lc rgb '#999999' t 'n^{-4}', gks w l dt 2 lw 2 lc rgb '#9467bd' t 'adaptive Gauss-Kronrod'");
+plot.cmd("set title 'singular: 1/sqrt(x) on [0,1] = 2' font ',11'; set yrange [1e-11:1]");
+plot.cmd("plot 'data/quad_singular.csv' u 1:2 w lp pt 7 lw 2 lc rgb '#1f77b4' t 'midpoint', '' u 1:3 w lp pt 5 lw 2 lc rgb '#2ca02c' t 'trapezoid', '' u 1:4 w lp pt 9 lw 2 lc rgb '#d62728' t 'Simpson', 1/sqrt(x) w l dt 3 lc rgb '#555555' t 'n^{-1/2}', gkz w l dt 2 lw 2 lc rgb '#9467bd' t 'adaptive Gauss-Kronrod'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/quadrature_orders-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/quadrature_orders-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/quadrature_orders.png");

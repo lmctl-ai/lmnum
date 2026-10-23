@@ -12,7 +12,8 @@ using Mat = Eigen::MatrixXd;
 double integrate(const std::string &expr, const std::string &var, double a, double b, double tol);
 double find_root(const std::string &expr, const std::string &var, double a, double b, double tol);
 // Nelder-Mead on the named variables, starting at x0 (n x 1). Returns the minimiser (n x 1).
-Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, double tol, int max_iter);
+// With `path`, every iteration appends the best vertex and its value as one row (n + 1 columns).
+Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, double tol, int max_iter, Mat *path = nullptr);
 Mat polyfit(const Mat &x, const Mat &y, int degree);
 double polyval(const Mat &coeffs, double x);  // coefficients in ascending powers
 double interp1(const Mat &x, const Mat &y, double at);  // piecewise linear, x ascending

@@ -1,0 +1,159 @@
+# A Markov chain for the weather: sunny, cloudy, rainy with the transition matrix P below. lmnum finds the stationary
+# distribution by solving (P^T - I) pi = 0 with sum pi = 1 (one linear solve), checks that pi P = pi, and raises P to
+# the powers 1, 2, 4, 8, 16 by repeated `mul` to show every starting weather forgetting its past: the rows of P^n
+# converge to pi (asserted to 1e-5 at n = 16; the geometric rate is the second eigenvalue, 0.473). The mean return time to a state
+# is 1/pi. lmdraw draws the state diagram with the probabilities and the convergence bars: images/markov_chain.png.
+mkdir("images");
+mkdir("data");
+mkdir("build/rendered");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let p = num.parse("0.7 0.2 0.1; 0.3 0.4 0.3; 0.2 0.3 0.5");
+# stationary distribution: rows of (P^T - I), the last replaced by the normalisation
+let a = p.transpose().sub(num.identity(3));
+a.set(2, 0, 1.0).set(2, 1, 1.0).set(2, 2, 1.0);
+let pi = a.solve(num.parse("0; 0; 1"));
+num.print("stationary distribution: sunny " + str(pi.get(0, 0)) + ", cloudy " + str(pi.get(1, 0)) + ", rainy " + str(pi.get(2, 0)));
+num.assert_close(pi.transpose().mul(p).sub(pi.transpose()).norm(), 0.0, 0.000000000001);
+num.assert_close(pi.sum(), 1.0, 0.000000000001);
+num.assert_close(pi.get(0, 0), 21.0 / 46.0, 0.000000000001);     # 21/46, 13/46, 12/46 by hand
+num.assert_close(pi.get(1, 0), 13.0 / 46.0, 0.000000000001);
+num.assert_close(pi.get(2, 0), 12.0 / 46.0, 0.000000000001);
+# powers of P: first row (starting sunny) and third row (starting rainy) at n = 1, 2, 4, 8, 16
+let table = num.matrix(5, 7);                        # n, P^n row sunny (3), P^n row rainy (3)
+let q = p.copy();
+let n = 1;
+for (k in range(0, 5)) {
+  table.set(k, 0, float(n));
+  for (j in range(0, 3)) { table.set(k, 1 + j, q.get(0, j)).set(k, 4 + j, q.get(2, j)); }
+  q = q.mul(q);
+  n = n * 2;
+}
+table.save_csv("data/markov_powers.csv");
+num.assert_close(abs(table.get(4, 1) - pi.get(0, 0)) + abs(table.get(4, 6) - pi.get(2, 0)), 0.0, 0.00001);
+# the rate of forgetting is the second largest eigenvalue: trace 1.6 and det 0.06 give 1, 0.3 + sqrt(0.03), 0.3 - sqrt(0.03)
+num.assert_close(p.sub(num.identity(3).scale(0.3 + sqrt(0.03))).det(), 0.0, 0.000000000001);
+num.assert_close(p.sub(num.identity(3).scale(0.3 - sqrt(0.03))).det(), 0.0, 0.000000000001);
+pi.transpose().save_csv("data/markov_pi.csv");
+end _dsl_
+savedsl(sim, "data/markov_chain-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/markov_chain-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+# read the numbers back for the drawing (lmnum writes space-separated rows without a header)
+fn nums(line) { out = []; for (t in split(trim(line), " ")) { if (t != "") { push(out, json_parse(t)); } } return out; }
+pi = nums(lines(read_file("data/markov_pi.csv"))[0]);
+pw = [];
+for (l in lines(read_file("data/markov_powers.csv"))) { if (!is_blank(l)) { push(pw, nums(l)); } }
+# bar geometry: five groups (n = 1, 2, 4, 8, 16) of three bars for the "start sunny" row, baseline y = 470, 1.6 px per %
+fn bh(v) { return 220.0 * v; }
+y00 = 450.0 - bh(pw[0][1]) + 0.0001;
+h00 = bh(pw[0][1]) + 0.0001;
+y01 = 450.0 - bh(pw[0][2]) + 0.0001;
+h01 = bh(pw[0][2]) + 0.0001;
+y02 = 450.0 - bh(pw[0][3]) + 0.0001;
+h02 = bh(pw[0][3]) + 0.0001;
+y10 = 450.0 - bh(pw[1][1]) + 0.0001;
+h10 = bh(pw[1][1]) + 0.0001;
+y11 = 450.0 - bh(pw[1][2]) + 0.0001;
+h11 = bh(pw[1][2]) + 0.0001;
+y12 = 450.0 - bh(pw[1][3]) + 0.0001;
+h12 = bh(pw[1][3]) + 0.0001;
+y20 = 450.0 - bh(pw[2][1]) + 0.0001;
+h20 = bh(pw[2][1]) + 0.0001;
+y21 = 450.0 - bh(pw[2][2]) + 0.0001;
+h21 = bh(pw[2][2]) + 0.0001;
+y22 = 450.0 - bh(pw[2][3]) + 0.0001;
+h22 = bh(pw[2][3]) + 0.0001;
+y30 = 450.0 - bh(pw[3][1]) + 0.0001;
+h30 = bh(pw[3][1]) + 0.0001;
+y31 = 450.0 - bh(pw[3][2]) + 0.0001;
+h31 = bh(pw[3][2]) + 0.0001;
+y32 = 450.0 - bh(pw[3][3]) + 0.0001;
+h32 = bh(pw[3][3]) + 0.0001;
+y40 = 450.0 - bh(pw[4][1]) + 0.0001;
+h40 = bh(pw[4][1]) + 0.0001;
+y41 = 450.0 - bh(pw[4][2]) + 0.0001;
+h41 = bh(pw[4][2]) + 0.0001;
+y42 = 450.0 - bh(pw[4][3]) + 0.0001;
+h42 = bh(pw[4][3]) + 0.0001;
+ps = sprintf("%.1f%%", 100.0 * pi[0]);
+pc = sprintf("%.1f%%", 100.0 * pi[1]);
+pr = sprintf("%.1f%%", 100.0 * pi[2]);
+ret = sprintf("mean return times: sunny %.2f days, cloudy %.2f, rainy %.2f", 1.0 / pi[0], 1.0 / pi[1], 1.0 / pi[2]);
+ys = 450.0 - bh(pi[0]) + 0.0001;
+yc = 450.0 - bh(pi[1]) + 0.0001;
+yr = 450.0 - bh(pi[2]) + 0.0001;
+
+d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 520, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "A Markov chain forgets where it started", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Daily weather transitions; lmnum solves for the stationary distribution and raises P to powers for the forecast", "#9fb3c8");
+# state diagram: sunny (150, 200), cloudy (330, 330), rainy (150, 440)
+scene.circle(150.0, 200.0, 46.0, "#f5c16c");
+scene.circle(330.0, 330.0, 46.0, "#9fb3c8");
+scene.circle(150.0, 440.0, 46.0, "#4fa3ff");
+scene.text(150.0, 206.0, 16.0, "sunny", "#0f1720").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(330.0, 336.0, 16.0, "cloudy", "#0f1720").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(150.0, 446.0, 16.0, "rainy", "#0f1720").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+# self loops
+scene.path("M 118,164 C 60,110 150,90 170,150", "none", "#e6edf3", 2.0).set_attr("marker-end", "arrow");
+scene.path("M 372,300 C 440,260 440,380 372,360", "none", "#e6edf3", 2.0).set_attr("marker-end", "arrow");
+scene.path("M 110,414 C 40,370 40,510 110,466", "none", "#e6edf3", 2.0).set_attr("marker-end", "arrow");
+scene.text(90.0, 104.0, 13.0, "0.7", "#e6edf3");
+scene.text(440.0, 336.0, 13.0, "0.4", "#e6edf3");
+scene.text(56.0, 400.0, 13.0, "0.5", "#e6edf3");
+# sunny <-> cloudy
+scene.arrow(190.0, 226.0, 292.0, 300.0, "#e6edf3", 2.0);
+scene.arrow(282.0, 318.0, 182.0, 246.0, "#e6edf3", 2.0);
+scene.text(262.0, 250.0, 13.0, "0.2", "#e6edf3");
+scene.text(208.0, 300.0, 13.0, "0.3", "#e6edf3");
+# cloudy <-> rainy
+scene.arrow(292.0, 360.0, 190.0, 414.0, "#e6edf3", 2.0);
+scene.arrow(182.0, 394.0, 282.0, 342.0, "#e6edf3", 2.0);
+scene.text(262.0, 404.0, 13.0, "0.3", "#e6edf3");
+scene.text(206.0, 362.0, 13.0, "0.3", "#e6edf3");
+# sunny <-> rainy
+scene.arrow(136.0, 246.0, 136.0, 394.0, "#e6edf3", 2.0);
+scene.arrow(164.0, 394.0, 164.0, 246.0, "#e6edf3", 2.0);
+scene.text(104.0, 324.0, 13.0, "0.1", "#e6edf3");
+scene.text(172.0, 324.0, 13.0, "0.2", "#e6edf3");
+# convergence bars: P^n first row (start sunny) for n = 1, 2, 4, 8, 16, against the stationary distribution
+scene.text(500.0, 130.0, 15.0, "Forecast n days after a sunny day: row 1 of P^n", "#e6edf3").set_attr("font-weight", "700");
+scene.text(500.0, 152.0, 12.5, "bars: P(sunny), P(cloudy), P(rainy); dashed: stationary distribution", "#9fb3c8");
+scene.line(490.0, 450.0, 845.0, 450.0, "#5b7690", 1.5);
+scene.rect(500.0, ${y00}, 13.0, ${h00}, "#f5c16c");
+scene.rect(517.0, ${y01}, 13.0, ${h01}, "#9fb3c8");
+scene.rect(534.0, ${y02}, 13.0, ${h02}, "#4fa3ff");
+scene.rect(568.0, ${y10}, 13.0, ${h10}, "#f5c16c");
+scene.rect(585.0, ${y11}, 13.0, ${h11}, "#9fb3c8");
+scene.rect(602.0, ${y12}, 13.0, ${h12}, "#4fa3ff");
+scene.rect(636.0, ${y20}, 13.0, ${h20}, "#f5c16c");
+scene.rect(653.0, ${y21}, 13.0, ${h21}, "#9fb3c8");
+scene.rect(670.0, ${y22}, 13.0, ${h22}, "#4fa3ff");
+scene.rect(704.0, ${y30}, 13.0, ${h30}, "#f5c16c");
+scene.rect(721.0, ${y31}, 13.0, ${h31}, "#9fb3c8");
+scene.rect(738.0, ${y32}, 13.0, ${h32}, "#4fa3ff");
+scene.rect(772.0, ${y40}, 13.0, ${h40}, "#f5c16c");
+scene.rect(789.0, ${y41}, 13.0, ${h41}, "#9fb3c8");
+scene.rect(806.0, ${y42}, 13.0, ${h42}, "#4fa3ff");
+scene.line(490.0, ${ys}, 845.0, ${ys}, "#f5c16c", 1.0).set_attr("stroke-dasharray", "5 4");
+scene.line(490.0, ${yc}, 845.0, ${yc}, "#9fb3c8", 1.0).set_attr("stroke-dasharray", "5 4");
+scene.line(490.0, ${yr}, 845.0, ${yr}, "#4fa3ff", 1.0).set_attr("stroke-dasharray", "5 4");
+scene.text(850.0, ${ys} + 4.0, 11.0, ${ps}, "#f5c16c");
+scene.text(850.0, ${yc} - 2.0, 11.0, ${pc}, "#9fb3c8");
+scene.text(850.0, ${yr} + 10.0, 11.0, ${pr}, "#4fa3ff");
+scene.text(525.0, 470.0, 12.0, "n = 1", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(593.0, 470.0, 12.0, "2", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(661.0, 470.0, 12.0, "4", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(729.0, 470.0, 12.0, "8", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(797.0, 470.0, 12.0, "16", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(500.0, 498.0, 12.0, ${ret}, "#9fb3c8");
+scene.render_png("build/rendered/markov_chain.png", 900, 520, 1);
+end _dsl_
+savedsl(d, "data/markov_chain-draw.dslb");
+r = system ${dsl_cli(d)} --dsl data/markov_chain-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/markov_chain.png", "images/markov_chain.png");
+println("wrote images/markov_chain.png");

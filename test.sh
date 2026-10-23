@@ -122,6 +122,15 @@ expect_error nosolution 'let x = num.system(1).eq(0, "x0^2 + 1").solve(num.parse
 expect_error manypoints 'let o = num.ode(1).rhs(0, "-y0").init(0, 1.0); let s = o.solve(0.0, 1.0, 4294967299);' "points"
 expect_error shadowparam 'let o = num.ode(1).param("t", 2.0).rhs(0, "-t*y0").init(0, 1.0); let s = o.solve(0.0, 1.0, 3);' "name of a variable"
 expect_error badnumber 'let x = num.eval("1e999");' "bad number"
+# NaN/inf results, bad shapes and non-positive-definite input used to pass through silently.
+expect_error evalnan 'let x = num.eval("sqrt(-1)");' "NaN"
+expect_error funcinf 'let x = num.func("1/x", "x").eval(0.0);' "infinite"
+expect_error mapnan 'let m = num.parse("1 -1").map(num.func("log(x)", "x"));' "NaN"
+expect_error polyshape 'let c = num.polyfit(num.parse("1 2; 3 4"), num.parse("1 2; 3 4"), 1);' "vector"
+expect_error interpshape 'let v = num.interp(num.parse("1 2; 3 4"), num.parse("1 2; 3 4"), 1.5);' "vector"
+expect_error notpd 'let l = num.parse("1 2; 2 1").cholesky();' "positive definite"
+expect_error blockrange 'let b = num.identity(3).block(2, 0, 2, 2);' "outside"
+expect_error badinttol 'let x = num.integrate_tol("x", "x", 0.0, 1.0, 0.0);' "tolerance"
 ok "errors stop the program with exit 3 and a clear message ($nerr cases)"
 
 # Memory budget: a runaway allocation loop stops with a run error (exit 3, message on stderr and in

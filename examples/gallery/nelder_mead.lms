@@ -1,0 +1,58 @@
+# Optimisation landscapes and the path of the Nelder-Mead simplex. lmnum's `minimize_path` records the best vertex of
+# every iteration. Left: the Rosenbrock banana f = (1 - x)^2 + 100 (y - x^2)^2 from (-1.5, 2), the path follows
+# the curved valley to the minimum (1, 1) (asserted to 1e-4). Right: Himmelblau's function has four minima, all
+# at f = 0; three starts end in three different ones, which is why the start point matters. lmplot draws the
+# contours (gnuplot evaluates the same formulas) and the paths into images/nelder_mead.png.
+# Needs lmnum 0.1.2 (minimize_path).
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let rosen = "(1 - x)^2 + 100*(y - x^2)^2";
+let path = num.minimize_path(rosen, "x y", num.parse("-1.5; 2"));
+let last = path.rows() - 1;
+num.print("Rosenbrock: " + str(path.rows()) + " iterations, minimum at (" + str(path.get(last, 0)) + ", " + str(path.get(last, 1)) + "), f = " + str(path.get(last, 2)));
+num.assert_close(path.get(last, 0), 1.0, 0.0001);
+num.assert_close(path.get(last, 1), 1.0, 0.0001);
+num.assert_close(path.get(0, 2), 6.25 + 100.0 * (2.0 - 2.25) * (2.0 - 2.25), 0.000000001);   # row 0 is the start
+path.save_csv("data/nm_rosenbrock.csv");
+let himmel = "(x^2 + y - 11)^2 + (x + y^2 - 7)^2";
+let p1 = num.minimize_path(himmel, "x y", num.parse("0; 0"));
+let p2 = num.minimize_path(himmel, "x y", num.parse("-4; 4"));
+let p3 = num.minimize_path(himmel, "x y", num.parse("-3; -3"));
+p1.save_csv("data/nm_h1.csv");
+p2.save_csv("data/nm_h2.csv");
+p3.save_csv("data/nm_h3.csv");
+# the four minima of Himmelblau's function: (3, 2), (-2.805, 3.131), (-3.779, -3.283), (3.584, -1.848)
+num.assert_close(p1.get(p1.rows() - 1, 2), 0.0, 0.00000001);
+num.assert_close(p2.get(p2.rows() - 1, 2), 0.0, 0.00000001);
+num.assert_close(p3.get(p3.rows() - 1, 2), 0.0, 0.00000001);
+num.assert_close(p1.get(p1.rows() - 1, 0), 3.0, 0.001);
+num.assert_close(p2.get(p2.rows() - 1, 0), -2.805118, 0.001);
+num.assert_close(p3.get(p3.rows() - 1, 0), -3.779310, 0.001);
+num.print("Himmelblau ends: (" + str(p1.get(p1.rows() - 1, 0)) + ", " + str(p1.get(p1.rows() - 1, 1)) + "), (" + str(p2.get(p2.rows() - 1, 0)) + ", " + str(p2.get(p2.rows() - 1, 1)) + "), (" + str(p3.get(p3.rows() - 1, 0)) + ", " + str(p3.get(p3.rows() - 1, 1)) + ")");
+end _dsl_
+savedsl(sim, "data/nelder_mead-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/nelder_mead-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/nelder_mead.png", 1000, 480);
+plot.cmd("set multiplot layout 1,2 title 'Nelder-Mead simplex paths from lmnum minimize_path on two classic landscapes' font ',13' noenhanced");
+plot.cmd("set view map; set contour base; set surface; set cntrparam levels discrete 1, 3, 10, 30, 100, 300, 1000; unset key; unset clabel");
+plot.cmd("set isosamples 120, 120; set samples 120, 120; set border 3; set tics nomirror; set xlabel 'x'; set ylabel 'y'");
+plot.cmd("set title 'Rosenbrock (1 - x)^2 + 100 (y - x^2)^2 from (-1.5, 2)' font ',10'; set xrange [-2:2]; set yrange [-1:3]");
+plot.cmd("set style line 10 lc rgb '#9ecae1' lw 1");
+plot.cmd("set label 1 'minimum (1, 1)' at 1.1, 0.75 font ',9'");
+plot.cmd("splot (1-x)**2 + 100*(y-x**2)**2 w l ls 10 nosurface notitle, 'data/nm_rosenbrock.csv' u 1:2:(0) w lp pt 7 ps 0.5 lw 1.5 lc rgb '#d62728' nocontours notitle, '+' u (1):(1):(0) every ::0::0 w p pt 2 ps 2 lw 2 lc rgb 'black' nocontours notitle");
+plot.cmd("unset label 1; set title 'Himmelblau (x^2 + y - 11)^2 + (x + y^2 - 7)^2, three starts' font ',10'; set xrange [-5:5]; set yrange [-5:5]");
+plot.cmd("set cntrparam levels discrete 1, 5, 20, 50, 100, 200, 400");
+plot.cmd("splot (x**2+y-11)**2 + (x+y**2-7)**2 w l ls 10 nosurface notitle, 'data/nm_h1.csv' u 1:2:(0) w lp pt 7 ps 0.5 lw 1.5 lc rgb '#d62728' nocontours notitle, 'data/nm_h2.csv' u 1:2:(0) w lp pt 7 ps 0.5 lw 1.5 lc rgb '#2ca02c' nocontours notitle, 'data/nm_h3.csv' u 1:2:(0) w lp pt 7 ps 0.5 lw 1.5 lc rgb '#ff7f0e' nocontours notitle, '+' u (3):(2):(0) every ::0::0 w p pt 2 ps 2 lw 2 lc rgb 'black' nocontours notitle, '+' u (-2.805):(3.131):(0) every ::0::0 w p pt 2 ps 2 lw 2 lc rgb 'black' nocontours notitle, '+' u (-3.779):(-3.283):(0) every ::0::0 w p pt 2 ps 2 lw 2 lc rgb 'black' nocontours notitle, '+' u (3.584):(-1.848):(0) every ::0::0 w p pt 2 ps 2 lw 2 lc rgb 'black' nocontours notitle");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/nelder_mead-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/nelder_mead-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/nelder_mead.png");

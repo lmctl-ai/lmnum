@@ -1,0 +1,94 @@
+# Monte Carlo integration converges like 1/sqrt(N) whatever the dimension. The volume of the unit ball is estimated
+# by throwing seeded uniform points into the cube [-1, 1]^d and counting hits, in 2 dimensions (pi = 3.14159) and in
+# 6 (pi^3/6 = 5.16771). For N = 10^2 .. 10^6 and three seeds the root-mean-square error follows the sqrt(p(1-p)/N)
+# line of the binomial count (asserted: fitted slope -0.5 within 0.15). The 1-D midpoint rule on the same budget
+# converges like 1/N^2 but a 6-D grid with N points has only N^(1/6) points per axis. lmplot draws images/monte_carlo.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let pi = 3.141592653589793;
+let lg = num.func("log(x)", "x");
+fn ball_volume(d: int, n: int, seed: int) -> float {
+  let pts = num.random(n, d, seed);
+  let hits = 0;
+  for (i in range(0, n)) {
+    let r2 = 0.0;
+    for (j in range(0, d)) {
+      let u = 2.0 * pts.get(i, j) - 1.0;
+      r2 = r2 + u * u;
+    }
+    if (r2 <= 1.0) { hits = hits + 1; }
+  }
+  return pow(2.0, float(d)) * float(hits) / float(n);
+}
+let exact2 = pi;
+let exact6 = pi * pi * pi / 6.0;
+let table = num.matrix(5, 5);                       # N, rms error 2-D, rms error 6-D, binomial line 2-D, 6-D
+let sx = 0.0;
+let sy = 0.0;
+let sxx = 0.0;
+let sxy = 0.0;
+for (k in range(0, 5)) {
+  let n = 100;
+  for (q in range(0, k)) { n = n * 10; }
+  let e2 = 0.0;
+  let e6 = 0.0;
+  for (seed in range(1, 4)) {
+    let v2 = ball_volume(2, n, seed);
+    let v6 = ball_volume(6, n, 100 + seed);
+    e2 = e2 + (v2 - exact2) * (v2 - exact2);
+    e6 = e6 + (v6 - exact6) * (v6 - exact6);
+  }
+  e2 = sqrt(e2 / 3.0);
+  e6 = sqrt(e6 / 3.0);
+  let p2 = exact2 / 4.0;
+  let p6 = exact6 / 64.0;
+  table.set(k, 0, float(n)).set(k, 1, e2).set(k, 2, e6);
+  table.set(k, 3, 4.0 * sqrt(p2 * (1.0 - p2) / float(n))).set(k, 4, 64.0 * sqrt(p6 * (1.0 - p6) / float(n)));
+  num.print("N = " + str(n) + ": rms error 2-D " + str(e2) + " (expected " + str(table.get(k, 3)) + "), 6-D " + str(e6) + " (expected " + str(table.get(k, 4)) + ")");
+  let lx = lg.eval(float(n));
+  let ly = lg.eval(e6);
+  sx = sx + lx;
+  sy = sy + ly;
+  sxx = sxx + lx * lx;
+  sxy = sxy + lx * ly;
+}
+let slope = (5.0 * sxy - sx * sy) / (5.0 * sxx - sx * sx);
+num.print("fitted error slope in 6-D: " + str(slope));
+num.assert_close(slope, -0.5, 0.15);
+num.assert_close(table.get(4, 1), table.get(4, 3), 2.0 * table.get(4, 3));   # within a factor 3 of the binomial line
+table.save_csv("data/mc_errors.csv");
+# the midpoint rule for the 1-D version, int_-1^1 2 sqrt(1 - x^2) dx = pi, on the same point budgets (order 1.5: the
+# integrand's derivative is singular at the ends, which costs the smooth-case order 2)
+let mid = num.matrix(5, 2);
+for (k in range(0, 5)) {
+  let n = 100;
+  for (q in range(0, k)) { n = n * 10; }
+  let h = 2.0 / float(n);
+  let s = 0.0;
+  for (i in range(0, n)) {
+    let x = -1.0 + (float(i) + 0.5) * h;
+    s = s + 2.0 * sqrt(1.0 - x * x);
+  }
+  mid.set(k, 0, float(n)).set(k, 1, abs(s * h - pi));
+}
+mid.save_csv("data/mc_midpoint.csv");
+end _dsl_
+savedsl(sim, "data/monte_carlo-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/monte_carlo-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/monte_carlo.png", 900, 560);
+plot.cmd("set title 'Monte Carlo volume of the unit ball (lmnum seeded uniforms): the error falls like 1/sqrt(N) in 2-D and in 6-D' font ',11'");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set logscale xy; set format y '10^{%L}'; set format x '10^{%L}'");
+plot.cmd("set xlabel 'points N'; set ylabel 'rms error over 3 seeds'; set key bottom left box opaque font ',9' samplen 1.5; set yrange [1e-9:10]");
+plot.cmd("plot 'data/mc_errors.csv' u 1:4 w l dt 2 lw 1.5 lc rgb '#1f77b4' t 'binomial sqrt(p(1-p)/N), 2-D', '' u 1:5 w l dt 2 lw 1.5 lc rgb '#d62728' t 'binomial, 6-D', '' u 1:2 w p pt 7 ps 1.5 lc rgb '#1f77b4' t '2-D: pi', '' u 1:3 w p pt 5 ps 1.5 lc rgb '#d62728' t '6-D: pi^3/6', 'data/mc_midpoint.csv' u 1:2 w lp pt 9 ps 1.2 lw 1.5 lc rgb '#2ca02c' t '1-D midpoint rule (N^{-1.5})'");
+plot.close();
+end _dsl_
+savedsl(draw, "data/monte_carlo-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/monte_carlo-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/monte_carlo.png");

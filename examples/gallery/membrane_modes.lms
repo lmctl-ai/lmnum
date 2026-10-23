@@ -1,0 +1,88 @@
+# Eigenmodes of a square drum. The Laplacian on a 24 x 24 interior grid of the unit square (fixed edge) is a 576 x 576
+# symmetric matrix; `eig_sym` gives the vibration frequencies and `eigvec_sym` the mode shapes. The lowest modes are
+# (1,1), (2,1)/(1,2) (degenerate: the solver returns a mixture of the two, which is a mode too), (2,2), (3,1)/(1,3). Eigenvalues match the discrete formula
+# 4/h^2 (sin^2(m pi h/2) + sin^2(n pi h/2)) to 1e-9 and the continuous (m^2 + n^2) pi^2 to 1% (asserted); mode
+# shapes are compared to sin(m pi x) sin(n pi y). lmplot draws images/membrane_modes.png.
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let pi = 3.141592653589793;
+let g = 24;
+let h = 1.0 / float(g + 1);
+let n = g * g;
+let lap = num.matrix(n, n);
+for (i in range(0, g)) {
+  for (j in range(0, g)) {
+    let p = i * g + j;
+    lap.set(p, p, 4.0 / (h * h));
+    if (i > 0) { lap.set(p, p - g, -1.0 / (h * h)); }
+    if (i < g - 1) { lap.set(p, p + g, -1.0 / (h * h)); }
+    if (j > 0) { lap.set(p, p - 1, -1.0 / (h * h)); }
+    if (j < g - 1) { lap.set(p, p + 1, -1.0 / (h * h)); }
+  }
+}
+let ev = lap.eig_sym();
+let vecs = lap.eigvec_sym();
+fn discrete(m: int, k: int, hh: float) -> float {
+  let a = sin(float(m) * 3.141592653589793 * hh / 2.0);
+  let b = sin(float(k) * 3.141592653589793 * hh / 2.0);
+  return 4.0 / (hh * hh) * (a * a + b * b);
+}
+num.assert_close(ev.get(0, 0), discrete(1, 1, h), 0.000000001);
+num.assert_close(ev.get(1, 0), discrete(2, 1, h), 0.000000001);
+num.assert_close(ev.get(2, 0), discrete(1, 2, h), 0.000000001);
+num.assert_close(ev.get(3, 0), discrete(2, 2, h), 0.000000001);
+num.assert_close(ev.get(4, 0), discrete(3, 1, h), 0.000000001);
+num.assert_close(ev.get(0, 0), 2.0 * pi * pi, 0.005 * 2.0 * pi * pi);
+num.assert_close(ev.get(3, 0), 8.0 * pi * pi, 0.01 * 8.0 * pi * pi);
+num.print("lowest eigenvalues / pi^2: " + str(ev.get(0, 0) / (pi * pi)) + " " + str(ev.get(1, 0) / (pi * pi)) + " " + str(ev.get(2, 0) / (pi * pi)) + " " + str(ev.get(3, 0) / (pi * pi)) + " " + str(ev.get(4, 0) / (pi * pi)));
+# mode shapes as g x g pictures: modes 0, 1, 3, 4 (the degenerate pair 1/2 spans the (2,1) and (1,2) shapes)
+let spectrum = num.matrix(12, 3);                   # index, eigenvalue/pi^2, continuous m^2+n^2
+for (q in range(0, 12)) { spectrum.set(q, 0, float(q + 1)).set(q, 1, ev.get(q, 0) / (pi * pi)); }
+spectrum.set(0, 2, 2.0).set(1, 2, 5.0).set(2, 2, 5.0).set(3, 2, 8.0).set(4, 2, 10.0).set(5, 2, 10.0).set(6, 2, 13.0).set(7, 2, 13.0).set(8, 2, 17.0).set(9, 2, 17.0).set(10, 2, 18.0).set(11, 2, 20.0);
+spectrum.save_csv("data/membrane_spectrum.csv");
+for (q in range(0, 4)) {
+  let col = 0;
+  if (q == 1) { col = 1; }
+  if (q == 2) { col = 3; }
+  if (q == 3) { col = 4; }
+  let shape = num.matrix(g, g);
+  let v = vecs.col(col);
+  let scale = 1.0 / max(abs(v.max()), abs(v.min()));
+  for (i in range(0, g)) { for (j in range(0, g)) { shape.set(i, j, v.get(i * g + j, 0) * scale); } }
+  shape.save_csv("data/membrane_mode" + str(q) + ".csv");
+}
+# the (2,2) mode is sin(2 pi x) sin(2 pi y) up to sign and scale
+let v22 = vecs.col(3);
+let ref = num.matrix(n, 1);
+for (i in range(0, g)) { for (j in range(0, g)) { ref.set(i * g + j, 0, sin(2.0 * pi * float(i + 1) * h) * sin(2.0 * pi * float(j + 1) * h)); } }
+let proj = abs(v22.transpose().mul(ref).get(0, 0)) / (v22.norm() * ref.norm());
+num.print("cosine between the computed (2,2) mode and sin(2 pi x) sin(2 pi y): " + str(proj));
+num.assert_close(proj, 1.0, 0.000000001);
+end _dsl_
+savedsl(sim, "data/membrane_modes-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/membrane_modes-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/membrane_modes.png", 1000, 640);
+plot.cmd("set multiplot title 'Vibration modes of a square drum (lmnum eig_sym on the 576 x 576 discrete Laplacian)' font ',13' noenhanced");
+plot.cmd("set size 0.25, 0.5; set origin 0, 0.44");
+plot.cmd("set size ratio -1; unset key; unset colorbox; unset xtics; unset ytics; set border 0; set cbrange [-1:1]; set xrange [-0.5:23.5]; set yrange [-0.5:23.5]");
+plot.cmd("set palette defined (0 '#b2182b', 0.5 '#f7f7f7', 1 '#2166ac')");
+plot.cmd("set title 'mode (1,1): 2 pi^2' font ',10'; plot 'data/membrane_mode0.csv' matrix w image");
+plot.cmd("set origin 0.25, 0.44; set title 'mode (2,1) + (1,2), degenerate: 5 pi^2' font ',10'; plot 'data/membrane_mode1.csv' matrix w image");
+plot.cmd("set origin 0.5, 0.44; set title 'mode (2,2): 8 pi^2' font ',10'; plot 'data/membrane_mode2.csv' matrix w image");
+plot.cmd("set origin 0.75, 0.44; set title 'mode (3,1) + (1,3), degenerate: 10 pi^2' font ',10'; plot 'data/membrane_mode3.csv' matrix w image");
+plot.cmd("set size 0.9, 0.44; set origin 0.05, 0; set size noratio; set border 3; set xtics nomirror; set ytics nomirror; set grid lc rgb '#dddddd'; set key top left box opaque font ',9' samplen 1.5");
+plot.cmd("set title 'the twelve lowest eigenvalues / pi^2: the grid values sit just below the continuous m^2 + n^2' font ',10'; set xlabel 'mode number'; set ylabel 'eigenvalue / pi^2'; set xrange [0.5:12.5]; set yrange [0:22]");
+plot.cmd("plot 'data/membrane_spectrum.csv' u 1:3 w p pt 6 ps 1.8 lw 2 lc rgb '#555555' t 'm^2 + n^2 (continuous)', '' u 1:2 w p pt 7 ps 1 lc rgb '#d62728' t 'eig_sym (24 x 24 grid)'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/membrane_modes-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/membrane_modes-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/membrane_modes.png");

@@ -1,0 +1,80 @@
+# Known answers (closed forms and published reference values) for every numeric routine, plus the
+# argument shapes that used to give silently wrong results (row-vector start for minimize).
+out = ARGV.len() > 0 ? ARGV[0] : "build/known_answers.dslb";
+mkdir("build/examples");
+p = _dsl_ cli="lmnum";
+let pi = num.eval("pi");
+# quadrature: smooth, endpoint singularities (integrable), rational
+num.assert_close(num.integrate("sin(x)", "x", 0.0, pi), 2.0, 0.000000001);
+num.assert_close(num.integrate("4/(1+x^2)", "x", 0.0, 1.0), pi, 0.000000001);
+num.assert_close(num.integrate("1/sqrt(x)", "x", 0.0, 1.0), 2.0, 0.0000001);
+num.assert_close(num.integrate("log(x)", "x", 0.0, 1.0), -1.0, 0.0000001);
+num.assert_close(num.integrate("x^2", "x", 3.0, 0.0), -9.0, 0.000000001);   # reversed bounds
+# Kepler's equation E - e sin E = M (e = 0.5, M = 1)
+num.assert_close(num.root("x - 0.5*sin(x) - 1", "x", 0.0, 3.0), 1.4987011335178484, 0.00000000001);
+# Brent with values that underflow when multiplied: f(a)*f(b) = 1e-400 -> 0 in doubles
+num.assert_close(num.root("1e-200*(x - 0.25)", "x", 0.0, 1.0), 0.25, 0.0000000001);
+# Nelder-Mead from a row vector start (was read past the end of the vector)
+let m = num.minimize("(x-3)^2 + (y+1)^2 + 2", "x y", num.parse("0 0"));
+num.assert_close(m.get(0, 0), 3.0, 0.0001);
+num.assert_close(m.get(1, 0), -1.0, 0.0001);
+# KINSOL on the Rosenbrock gradient system (classic test, root (1, 1) from (-1.2, 1))
+let rs = num.system(2).eq(0, "1 - x0").eq(1, "10*(x1 - x0^2)");
+let r = rs.solve(num.parse("-1.2; 1"), 0.0000000001);
+num.assert_close(r.get(0, 0), 1.0, 0.00000001);
+num.assert_close(r.get(1, 0), 1.0, 0.00000001);
+# ODEs against closed forms: harmonic oscillator y'' = -y (cos t), decay y' = -k y (exp(-k t))
+let osc = num.ode(2).rhs(0, "y1").rhs(1, "-y0").init(0, 1.0).tol(0.0000000001, 0.000000000001);
+let so = osc.solve(0.0, 10.0, 11);
+num.assert_close(so.get(10, 0), 10.0, 0.0);
+num.assert_close(so.get(10, 1), -0.8390715290764524, 0.0000001);
+let dec = num.ode(1).param("k", 0.25).rhs(0, "-k*y0").init(0, 1.0).stiff();
+let sd = dec.solve(0.0, 10.0, 3);
+num.assert_close(sd.get(2, 1), 0.0820849986238988, 0.0000001);
+# Robertson at t = 40, reference solution of the Hairer-Wanner test set:
+# y = (0.7158270687193941, 9.185534764557338e-06, 0.2841637457458413)
+let rob = num.ode(3).stiff().tol(0.0000000001, 0.00000000000001);
+rob.rhs(0, "-0.04*y0 + 10000*y1*y2").rhs(1, "0.04*y0 - 10000*y1*y2 - 30000000*y1*y1").rhs(2, "30000000*y1*y1");
+rob.init(0, 1.0);
+let sr = rob.solve(0.0, 40.0, 2);
+num.assert_close(sr.get(1, 1), 0.7158270687193941, 0.000001);
+num.assert_close(sr.get(1, 2), 0.000009185534764557338, 0.0000000001);
+num.assert_close(sr.get(1, 3), 0.2841637457458413, 0.000001);
+# Hilbert matrix H3: det 1/2160, inverse has integer entries
+let h = num.parse("1 0.5 0.3333333333333333; 0.5 0.3333333333333333 0.25; 0.3333333333333333 0.25 0.2");
+num.assert_close(h.det(), 1.0 / 2160.0, 0.000000000001);
+let hi = h.inverse();
+num.assert_close(hi.get(0, 0), 9.0, 0.000001);
+num.assert_close(hi.get(1, 1), 192.0, 0.00001);
+num.assert_close(hi.get(2, 1), -180.0, 0.00001);
+num.assert_close(h.solve(num.parse("1; 1; 1")).get(0, 0), 3.0, 0.000001);   # row sums of inv(H3)
+# symmetric eigenpairs: [2 1; 1 2] has eigenvalues 1, 3 and A v = lambda v
+let s = num.parse("2 1; 1 2");
+let ev = s.eig_sym();
+num.assert_close(ev.get(0, 0), 1.0, 0.000000000001);
+num.assert_close(ev.get(1, 0), 3.0, 0.000000000001);
+let vecs = s.eigvec_sym();
+num.assert_close(s.mul(vecs.col(1)).sub(vecs.col(1).scale(3.0)).norm(), 0.0, 0.000000000001);
+# interpolation and statistics
+let xs = num.parse("0; 1; 3");
+let ys = num.parse("0; 10; 30");
+num.assert_close(num.interp(xs, ys, 2.0), 20.0, 0.0);
+num.assert_close(num.interp(xs, ys, -1.0), 0.0, 0.0);   # clamps at the ends
+num.assert_close(num.parse("1 2 3 4").std(), sqrt(5.0 / 3.0), 0.000000000001);
+# save_csv / load_csv round-trip every double exactly
+let q = num.parse("0.1 0.123456789012345678; -1e-300 3.141592653589793");
+q.save_csv("build/examples/roundtrip.csv");
+num.assert_close(num.load_csv("build/examples/roundtrip.csv").sub(q).norm(), 0.0, 0.0);
+# seeded random numbers are the same on every platform (explicit algorithms, mt19937-64)
+let u = num.random(2, 2, 42);
+num.assert_close(u.get(0, 0), 0.755155532954539, 0.00000000000001);
+num.assert_close(u.get(1, 1), 0.136272683632437, 0.00000000000001);
+let g = num.normal(2, 2, 42);
+num.assert_close(g.get(0, 0), 1.29382042327294, 0.000000000001);
+num.assert_close(g.get(1, 1), -0.574094806720261, 0.000000000001);
+let big = num.normal(100000, 1, 7);
+num.assert_close(big.mean(), 0.0, 0.015);
+num.assert_close(big.std(), 1.0, 0.015);
+num.assert_close(num.random(100000, 1, 7).mean(), 0.5, 0.005);
+end _dsl_
+savedsl(p, out);

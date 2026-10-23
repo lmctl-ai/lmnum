@@ -34,7 +34,7 @@ ok "build"
 want_version="lmnum $(sed -n 's/^project(lmnum VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
 [ "$("$HOST" --version)" = "$want_version" ] || fail "--version is not exactly '$want_version'"
 ok "--version prints exactly '$want_version'"
-python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmnum.dsl.json 2>/dev/null || [ ! -d .git ] || fail "schema/lmnum.dsl.json is stale: run scripts/gen-schema.py"
+python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmnum.dsl.json 2>/dev/null || [ ! -e .git ] || fail "schema/lmnum.dsl.json is stale: run scripts/gen-schema.py"
 ok "schema matches the registrations in cpp/main.cpp"
 "$HOST" --dsl-schema --json >"$WORK/schema.json" || fail "embedded schema print"
 cmp -s "$WORK/schema.json" schema/lmnum.dsl.json || fail "embedded schema differs from schema/lmnum.dsl.json"
@@ -83,8 +83,10 @@ for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/after.txt"
 cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
 ok "all $(wc -l <"$WORK/after.txt" | tr -d ' ') result files are byte-identical on rerun"
 
+nerr=0
 # Error paths: each snippet must fail the run with exit 3 and a message naming the problem.
 expect_error() { # name, snippet, expected message fragment
+  nerr=$((nerr+1))
   cat >"$WORK/$1.lms" <<LMS
 p = _dsl_ cli="lmnum";
 $2
@@ -104,7 +106,22 @@ expect_error unknown 'let x = num.eval("foo + 1");' "unknown name"
 expect_error bracket 'let x = num.root("x^2 + 1", "x", 0.0, 1.0);' "bracket"
 expect_error noeq 'let o = num.ode(2); let s = o.solve(0.0, 1.0, 5);' "rhs"
 expect_error assertfail 'num.assert_close(1.0, 2.0, 0.1);' "assert_close failed"
-ok "errors stop the program with exit 3 and a clear message (8 cases)"
+# Inputs that used to give a wrong answer (or a crash) without an error.
+expect_error nearsingular 'let x = num.parse("1 2 3; 4 5 6; 7 8 9").solve(num.parse("1; 1; 2"));' "singular"
+expect_error nonsym 'let e = num.parse("1 5; 2 2").eig_sym();' "not symmetric"
+expect_error unsorted 'let v = num.interp(num.parse("0; 2; 1"), num.parse("0; 2; 1"), 1.5);' "strictly increasing"
+expect_error rootnan 'let x = num.root("sqrt(x - 2)", "x", 0.0, 3.0);' "NaN"
+expect_error tinybracket 'let x = num.root("1e-200*(x + 1)", "x", 0.0, 1.0);' "bracket"
+expect_error infintegral 'let x = num.integrate("1/x", "x", -1.0, 1.0);' "not finite"
+expect_error negsize 'let m = num.random(-1, 3, 1);' "bad size"
+expect_error nantext 'let m = num.parse("nan 1");' "finite"
+expect_error emptymean 'let x = num.matrix(0, 3).mean();' "empty"
+expect_error badtol 'let o = num.ode(1).tol(-1.0, 0.0);' "Ode.tol"
+expect_error badsystol 'let x = num.system(1).eq(0, "x0^2 - 2").solve(num.parse("1"), -1.0);' "tolerance"
+expect_error nosolution 'let x = num.system(1).eq(0, "x0^2 + 1").solve(num.parse("1"), 0.0000000001);' "nlsolve"
+expect_error manypoints 'let o = num.ode(1).rhs(0, "-y0").init(0, 1.0); let s = o.solve(0.0, 1.0, 4294967299);' "points"
+expect_error badnumber 'let x = num.eval("1e999");' "bad number"
+ok "errors stop the program with exit 3 and a clear message ($nerr cases)"
 
 # README gallery: every linked example and image exists, images are valid PNG/GIF within the size limits.
 magic_ok() { # file

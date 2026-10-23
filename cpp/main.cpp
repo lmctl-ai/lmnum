@@ -1,7 +1,9 @@
 // lmnum: Eigen + SUNDIALS (CVODE, KINSOL) behind an lmscript `_dsl_` schema. Scripting only:
 // the executable has no user-facing commands besides --dsl and the schema/version queries.
 #include <cmath>
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -86,6 +88,45 @@ void square(const Mat &a, const char *who) {
 }
 
 std::string fmt(double x) { char b[40]; std::snprintf(b, sizeof b, "%.10g", x); return b; }
+// Shortest of %.15g/%.16g/%.17g that reads back as the same double: files round-trip exactly.
+std::string fmt_exact(double x) {
+  char b[40];
+  for (int prec = 15; prec <= 17; prec++) {
+    std::snprintf(b, sizeof b, "%.*g", prec, x);
+    if (std::strtod(b, nullptr) == x || std::isnan(x)) break;
+  }
+  return b;
+}
+
+// Matrix sizes from script integers: non-negative, at most 1e8 entries (no int64 overflow).
+void need_dims(int64_t r, int64_t c, const char *who) {
+  if (r < 0 || c < 0 || r > 100000000 || c > 100000000 || (r > 0 && c > 100000000 / r))
+    throw dslvm::Error(std::string(who) + ": bad size " + std::to_string(r) + "x" + std::to_string(c) +
+                       " (rows and columns must be >= 0, at most 1e8 entries)");
+}
+void need_finite(const Mat &m, const char *who) {
+  if (!m.allFinite()) throw dslvm::Error(std::string(who) + ": matrix contains NaN or infinity");
+}
+void need_symmetric(const Mat &m, const char *who) {
+  square(m, who);
+  need_finite(m, who);
+  double scale = m.size() ? m.cwiseAbs().maxCoeff() : 0.0;
+  if ((m - m.transpose()).cwiseAbs().maxCoeff() > 1e-10 * std::max(1.0, scale))
+    throw dslvm::Error(std::string(who) + ": matrix is not symmetric");
+}
+
+// Portable random numbers: mt19937_64 is fully specified by the standard, but the
+// std::*_distribution algorithms are implementation-defined (libstdc++ and libc++ differ).
+// These are explicit so a seed gives the same matrix on every platform.
+double uniform01(std::mt19937_64 &g) { return (double)(g() >> 11) * 0x1.0p-53; }  // [0, 1)
+double std_normal(std::mt19937_64 &g, bool &have, double &spare) {  // Marsaglia polar method
+  if (have) { have = false; return spare; }
+  double u, v, s;
+  do { u = 2 * uniform01(g) - 1; v = 2 * uniform01(g) - 1; s = u * u + v * v; } while (s >= 1 || s == 0);
+  double k = std::sqrt(-2 * std::log(s) / s);
+  spare = v * k; have = true;
+  return u * k;
+}
 
 Mat parse_matrix(const std::string &text) {
   std::vector<std::vector<double>> rows;
@@ -97,6 +138,7 @@ Mat parse_matrix(const std::string &text) {
     double v;
     try { v = std::stod(tok, &used); } catch (...) { used = 0; v = 0; }
     if (used != tok.size()) throw std::runtime_error("matrix text: bad number '" + tok + "'");
+    if (!std::isfinite(v)) throw std::runtime_error("matrix text: '" + tok + "' is not a finite number");
     cur.push_back(v);
     tok.clear();
   };
@@ -130,7 +172,7 @@ void register_host(dslvm::Registry &r, Host &h) {
 
   // ---------------------------------------------------------------- Num
   method(r, "Num", "matrix", {"int", "int"}, "Matrix", [&h](void *, Args &a) {
-    if (a[0].i < 0 || a[1].i < 0 || a[0].i * a[1].i > 100000000) throw dslvm::Error("Num.matrix: bad size");
+    need_dims(a[0].i, a[1].i, "Num.matrix");
     return h.mat(Mat::Zero(a[0].i, a[1].i));
   });
   method(r, "Num", "identity", {"int"}, "Matrix", [&h](void *, Args &a) {
@@ -140,20 +182,23 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Num", "parse", {"string"}, "Matrix", [&h](void *, Args &a) { return h.mat(parse_matrix(a[0].s)); });
   method(r, "Num", "linspace", {"float", "float", "int"}, "Matrix", [&h](void *, Args &a) {
     if (a[2].i < 2) throw dslvm::Error("Num.linspace: need at least 2 points");
+    if (a[2].i > 100000000) throw dslvm::Error("Num.linspace: at most 1e8 points");
+    if (!std::isfinite(a[0].f) || !std::isfinite(a[1].f)) throw dslvm::Error("Num.linspace: ends must be finite");
     return h.mat(Mat(Eigen::VectorXd::LinSpaced(a[2].i, a[0].f, a[1].f)));
   });
   method(r, "Num", "random", {"int", "int", "int"}, "Matrix", [&h](void *, Args &a) {
+    need_dims(a[0].i, a[1].i, "Num.random");
     std::mt19937_64 g((uint64_t)a[2].i);
-    std::uniform_real_distribution<double> d(0.0, 1.0);
     Mat m(a[0].i, a[1].i);
-    for (int i = 0; i < m.rows(); i++) for (int j = 0; j < m.cols(); j++) m(i, j) = d(g);
+    for (Eigen::Index i = 0; i < m.rows(); i++) for (Eigen::Index j = 0; j < m.cols(); j++) m(i, j) = uniform01(g);
     return h.mat(m);
   });
   method(r, "Num", "normal", {"int", "int", "int"}, "Matrix", [&h](void *, Args &a) {
+    need_dims(a[0].i, a[1].i, "Num.normal");
     std::mt19937_64 g((uint64_t)a[2].i);
-    std::normal_distribution<double> d(0.0, 1.0);
+    bool have = false; double spare = 0;
     Mat m(a[0].i, a[1].i);
-    for (int i = 0; i < m.rows(); i++) for (int j = 0; j < m.cols(); j++) m(i, j) = d(g);
+    for (Eigen::Index i = 0; i < m.rows(); i++) for (Eigen::Index j = 0; j < m.cols(); j++) m(i, j) = std_normal(g, have, spare);
     return h.mat(m);
   });
   method(r, "Num", "load_csv", {"string"}, "Matrix", [&h](void *, Args &a) {
@@ -195,6 +240,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     return h.mat(lmnum::minimize(a[0].s, a[1].s, arg_mat(a[2]), 1e-12, 20000));
   });
   method(r, "Num", "polyfit", {"Matrix", "Matrix", "int"}, "Matrix", [&h](void *, Args &a) {
+    if (a[2].i < 0 || a[2].i > 1000) throw dslvm::Error("Num.polyfit: degree must be 0..1000");
     return h.mat(lmnum::polyfit(arg_mat(a[0]), arg_mat(a[1]), (int)a[2].i));
   });
   method(r, "Num", "polyval", {"Matrix", "float"}, "float", [](void *, Args &a) {
@@ -229,6 +275,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Matrix", "transpose", {}, "Matrix", [&h](void *p, Args &) { return h.mat(M(p).transpose()); });
   method(r, "Matrix", "inverse", {}, "Matrix", [&h](void *p, Args &) {
     square(M(p), "Matrix.inverse");
+    need_finite(M(p), "Matrix.inverse");
     Eigen::FullPivLU<Mat> lu(M(p));
     if (!lu.isInvertible()) throw dslvm::Error("Matrix.inverse: matrix is singular");
     return h.mat(lu.inverse());
@@ -239,8 +286,11 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Matrix", "solve", {"Matrix"}, "Matrix", [&h](void *p, Args &a) {
     square(M(p), "Matrix.solve");
     if (M(p).rows() != arg_mat(a[0]).rows()) throw dslvm::Error("Matrix.solve: right-hand side has the wrong number of rows");
-    Eigen::PartialPivLU<Mat> lu(M(p));
-    if (std::fabs(M(p).determinant()) == 0) throw dslvm::Error("Matrix.solve: matrix is singular");
+    need_finite(M(p), "Matrix.solve");
+    // Full pivoting with Eigen's rank threshold: an exact-zero determinant test misses
+    // numerically singular matrices (det of [1 2 3; 4 5 6; 7 8 9] is 6.7e-16 in doubles).
+    Eigen::FullPivLU<Mat> lu(M(p));
+    if (!lu.isInvertible()) throw dslvm::Error("Matrix.solve: matrix is singular");
     return h.mat(lu.solve(arg_mat(a[0])));
   });
   method(r, "Matrix", "lstsq", {"Matrix"}, "Matrix", [&h](void *p, Args &a) {
@@ -248,13 +298,15 @@ void register_host(dslvm::Registry &r, Host &h) {
     return h.mat(M(p).bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(arg_mat(a[0])));
   });
   method(r, "Matrix", "eig_sym", {}, "Matrix", [&h](void *p, Args &) {
-    square(M(p), "Matrix.eig_sym");
+    need_symmetric(M(p), "Matrix.eig_sym");
     Eigen::SelfAdjointEigenSolver<Mat> s(M(p));
+    if (s.info() != Eigen::Success) throw dslvm::Error("Matrix.eig_sym: eigensolver did not converge");
     return h.mat(Mat(s.eigenvalues()));
   });
   method(r, "Matrix", "eigvec_sym", {}, "Matrix", [&h](void *p, Args &) {
-    square(M(p), "Matrix.eigvec_sym");
+    need_symmetric(M(p), "Matrix.eigvec_sym");
     Eigen::SelfAdjointEigenSolver<Mat> s(M(p));
+    if (s.info() != Eigen::Success) throw dslvm::Error("Matrix.eigvec_sym: eigensolver did not converge");
     return h.mat(s.eigenvectors());
   });
   method(r, "Matrix", "svd_values", {}, "Matrix", [&h](void *p, Args &) { return h.mat(Mat(M(p).bdcSvd().singularValues())); });
@@ -269,7 +321,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     Mat m(M(p).rows() + arg_mat(a[0]).rows(), M(p).cols()); m << M(p), arg_mat(a[0]); return h.mat(m);
   });
   method(r, "Matrix", "sum", {}, "float", [](void *p, Args &) { return Value::real(M(p).sum()); });
-  method(r, "Matrix", "mean", {}, "float", [](void *p, Args &) { return Value::real(M(p).size() ? M(p).mean() : 0.0); });
+  method(r, "Matrix", "mean", {}, "float", [](void *p, Args &) { if (!M(p).size()) throw dslvm::Error("Matrix.mean: empty"); return Value::real(M(p).mean()); });
   method(r, "Matrix", "min", {}, "float", [](void *p, Args &) { if (!M(p).size()) throw dslvm::Error("Matrix.min: empty"); return Value::real(M(p).minCoeff()); });
   method(r, "Matrix", "max", {}, "float", [](void *p, Args &) { if (!M(p).size()) throw dslvm::Error("Matrix.max: empty"); return Value::real(M(p).maxCoeff()); });
   method(r, "Matrix", "std", {}, "float", [](void *p, Args &) {
@@ -288,7 +340,9 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Matrix", "save_csv", {"string"}, "void", [](void *p, Args &a) {
     std::ofstream f(a[0].s);
     if (!f) throw dslvm::Error("Matrix.save_csv: cannot write " + a[0].s);
-    for (int i = 0; i < M(p).rows(); i++) { for (int j = 0; j < M(p).cols(); j++) f << (j ? " " : "") << fmt(M(p)(i, j)); f << "\n"; }
+    for (int i = 0; i < M(p).rows(); i++) { for (int j = 0; j < M(p).cols(); j++) f << (j ? " " : "") << fmt_exact(M(p)(i, j)); f << "\n"; }
+    f.close();
+    if (!f) throw dslvm::Error("Matrix.save_csv: write failed for " + a[0].s);
     return Value::none();
   });
 
@@ -315,9 +369,13 @@ void register_host(dslvm::Registry &r, Host &h) {
     ode(p).y0[a[0].i] = a[1].f; return Value::object("Ode", p);
   });
   method(r, "Ode", "param", {"string", "float"}, "Ode", [ode](void *p, Args &a) { ode(p).params[a[0].s] = a[1].f; return Value::object("Ode", p); });
-  method(r, "Ode", "tol", {"float", "float"}, "Ode", [ode](void *p, Args &a) { ode(p).rtol = a[0].f; ode(p).atol = a[1].f; return Value::object("Ode", p); });
+  method(r, "Ode", "tol", {"float", "float"}, "Ode", [ode](void *p, Args &a) {
+    if (!(a[0].f >= 0 && a[1].f >= 0 && std::isfinite(a[0].f) && std::isfinite(a[1].f) && a[0].f + a[1].f > 0))
+      throw dslvm::Error("Ode.tol: tolerances must be finite, >= 0 and not both zero");
+    ode(p).rtol = a[0].f; ode(p).atol = a[1].f; return Value::object("Ode", p); });
   method(r, "Ode", "stiff", {}, "Ode", [ode](void *p, Args &) { ode(p).stiff = true; return Value::object("Ode", p); });
   method(r, "Ode", "solve", {"float", "float", "int"}, "Matrix", [ode, &h](void *p, Args &a) {
+    if (a[2].i < 2 || a[2].i > 10000000) throw dslvm::Error("Ode.solve: points must be 2..1e7");
     return h.mat(lmnum::ode_solve(ode(p), a[0].f, a[1].f, (int)a[2].i));
   });
 
@@ -330,6 +388,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "System", "solve", {"Matrix", "float"}, "Matrix", [&h](void *p, Args &a) {
     auto *s = static_cast<System *>(p);
     for (auto &e : s->eqs) if (e.empty()) throw dslvm::Error("System.solve: every equation needs eq()");
+    if (!(a[1].f > 0 && std::isfinite(a[1].f))) throw dslvm::Error("System.solve: tolerance must be > 0");
     return h.mat(lmnum::nonlinear_solve(s->eqs, arg_mat(a[0]), a[1].f));
   });
 }

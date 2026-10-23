@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cvode/cvode.h>
 #include <kinsol/kinsol.h>
 #include <nvector/nvector_serial.h>
@@ -41,11 +42,19 @@ Seg gk15(const Expr &f, double a, double b, double *x) {
     rk += WGK[j] * (f1 + f2);
     if (j % 2 == 1) rg += WG[j / 2] * (f1 + f2);
   }
+  if (!std::isfinite(rk)) {
+    char m[160];
+    std::snprintf(m, sizeof m, "integrate: integrand is not finite on [%.10g, %.10g] (singularity or NaN?)", a, b);
+    throw std::runtime_error(m);
+  }
   return {a, b, rk * h, std::fabs((rk - rg) * h)};
 }
+// Sign tests without multiplying: fa*fb underflows to 0 for tiny values (1e-200 * 1e-200).
+bool same_sign(double p, double q) { return (p > 0 && q > 0) || (p < 0 && q < 0); }
 }  // namespace
 
 double integrate(const std::string &expr, const std::string &var, double a, double b, double tol) {
+  if (!std::isfinite(a) || !std::isfinite(b)) throw std::runtime_error("integrate: bounds must be finite");
   Expr f(expr, {var});
   double x[1];
   std::vector<Seg> segs{gk15(f, a, b, x)};
@@ -63,15 +72,24 @@ double integrate(const std::string &expr, const std::string &var, double a, doub
 }
 
 double find_root(const std::string &expr, const std::string &var, double a, double b, double tol) {
+  if (!std::isfinite(a) || !std::isfinite(b)) throw std::runtime_error("root: bounds must be finite");
   Expr e(expr, {var});
-  auto f = [&](double x) { return e.eval(&x); };
+  auto f = [&](double x) {
+    double y = e.eval(&x);
+    if (std::isnan(y)) {
+      char m[120];
+      std::snprintf(m, sizeof m, "root: f(%.10g) is NaN", x);
+      throw std::runtime_error(m);
+    }
+    return y;
+  };
   double fa = f(a), fb = f(b);
   if (fa == 0) return a;
   if (fb == 0) return b;
-  if (fa * fb > 0) throw std::runtime_error("root: f(a) and f(b) have the same sign; the interval does not bracket a root");
+  if (same_sign(fa, fb)) throw std::runtime_error("root: f(a) and f(b) have the same sign; the interval does not bracket a root");
   double c = a, fc = fa, d = b - a, e2 = d;
   for (int i = 0; i < 200; i++) {  // Brent's method
-    if (fb * fc > 0) { c = a; fc = fa; d = b - a; e2 = d; }
+    if (same_sign(fb, fc)) { c = a; fc = fa; d = b - a; e2 = d; }
     if (std::fabs(fc) < std::fabs(fb)) { a = b; b = c; c = a; fa = fb; fb = fc; fc = fa; }
     double tol1 = 2 * 2.2e-16 * std::fabs(b) + 0.5 * tol, xm = 0.5 * (c - b);
     if (std::fabs(xm) <= tol1 || fb == 0) return b;
@@ -94,19 +112,25 @@ double find_root(const std::string &expr, const std::string &var, double a, doub
 Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, double tol, int max_iter) {
   auto names = split_names(vars);
   int n = (int)names.size();
+  if (n == 0) throw std::runtime_error("minimize: no variables");
   if (x0.size() != n) throw std::runtime_error("minimize: start vector length does not match the variables");
+  if (!x0.allFinite()) throw std::runtime_error("minimize: start vector is not finite");
   Expr e(expr, names);
-  auto f = [&](const Eigen::VectorXd &x) { return e.eval(x.data()); };
-  std::vector<Eigen::VectorXd> p(n + 1, Eigen::VectorXd(x0.col(0)));
+  // NaN would break the ordering std::sort needs; treat it as +inf (outside the domain).
+  auto f = [&](const Eigen::VectorXd &x) { double y = e.eval(x.data()); return std::isnan(y) ? HUGE_VAL : y; };
+  // x0 may be a row or a column vector: flatten it (x0.col(0) of a row vector has one entry).
+  const Eigen::VectorXd start = x0.reshaped();
+  std::vector<Eigen::VectorXd> p(n + 1, start);
   for (int i = 0; i < n; i++) p[i + 1](i) += p[i + 1](i) != 0 ? 0.05 * p[i + 1](i) : 0.00025;
   std::vector<double> fv(n + 1);
   for (int i = 0; i <= n; i++) fv[i] = f(p[i]);
   std::vector<int> idx(n + 1);
+  bool converged = false;
   for (int it = 0; it < max_iter; it++) {
     for (int i = 0; i <= n; i++) idx[i] = i;
     std::sort(idx.begin(), idx.end(), [&](int a, int b) { return fv[a] < fv[b]; });
     int lo = idx[0], hi = idx[n], nh = idx[n - 1];
-    if (std::fabs(fv[hi] - fv[lo]) <= tol * (std::fabs(fv[hi]) + std::fabs(fv[lo]) + 1e-30)) break;
+    if (std::fabs(fv[hi] - fv[lo]) <= tol * (std::fabs(fv[hi]) + std::fabs(fv[lo]) + 1e-30)) { converged = true; break; }
     Eigen::VectorXd c = Eigen::VectorXd::Zero(n);
     for (int i = 0; i <= n; i++) if (i != hi) c += p[i];
     c /= n;
@@ -124,7 +148,9 @@ Mat minimize(const std::string &expr, const std::string &vars, const Mat &x0, do
       else for (int i = 0; i <= n; i++) if (i != lo) { p[i] = p[lo] + 0.5 * (p[i] - p[lo]); fv[i] = f(p[i]); }
     }
   }
+  if (!converged) throw std::runtime_error("minimize: no convergence in " + std::to_string(max_iter) + " iterations");
   int best = (int)(std::min_element(fv.begin(), fv.end()) - fv.begin());
+  if (!std::isfinite(fv[best])) throw std::runtime_error("minimize: the function is not finite near the start point");
   return Mat(p[best]);
 }
 
@@ -145,6 +171,8 @@ double polyval(const Mat &c, double x) {
 double interp1(const Mat &x, const Mat &y, double at) {
   int n = (int)x.size();
   if (n < 2 || y.size() != n) throw std::runtime_error("interp: need matching x and y with at least 2 points");
+  for (int i = 1; i < n; i++)
+    if (!(x(i) > x(i - 1))) throw std::runtime_error("interp: x must be strictly increasing (entry " + std::to_string(i) + ")");
   if (at <= x(0)) return y(0);
   if (at >= x(n - 1)) return y(n - 1);
   int lo = 0, hi = n - 1;
@@ -164,7 +192,11 @@ int ode_rhs(sunrealtype t, N_Vector y, N_Vector ydot, void *user) {
   std::vector<double> v(c->n + 1);
   v[0] = t;
   for (int i = 0; i < c->n; i++) v[i + 1] = NV_Ith_S(y, i);
-  for (int i = 0; i < c->n; i++) NV_Ith_S(ydot, i) = c->f[i]->eval(v.data());
+  for (int i = 0; i < c->n; i++) {
+    double d = c->f[i]->eval(v.data());
+    if (!std::isfinite(d)) return 1;  // recoverable: CVODE retries with a smaller step, then fails
+    NV_Ith_S(ydot, i) = d;
+  }
   return 0;
 }
 struct Ctx {
@@ -177,6 +209,8 @@ struct Ctx {
 Mat ode_solve(const OdeSpec &s, double t0, double t1, int points) {
   if (s.n <= 0) throw std::runtime_error("ode: no equations");
   if (points < 2) throw std::runtime_error("ode: points must be at least 2");
+  if (!std::isfinite(t0) || !std::isfinite(t1) || t0 == t1) throw std::runtime_error("ode: need finite t0 != t1");
+  for (double v : s.y0) if (!std::isfinite(v)) throw std::runtime_error("ode: initial values must be finite");
   if ((int)s.rhs.size() != s.n || (int)s.y0.size() != s.n) throw std::runtime_error("ode: every equation needs rhs() and init()");
   OdeCtx c;
   c.n = s.n;
@@ -194,11 +228,12 @@ Mat ode_solve(const OdeSpec &s, double t0, double t1, int points) {
   SUNLinearSolver LS = SUNLinSol_Dense(y, A, sc.ctx);
   auto cleanup = [&] { SUNLinSolFree(LS); SUNMatDestroy(A); CVodeFree(&mem); N_VDestroy(y); };
   try {
+    if (!mem || !A || !LS) throw std::runtime_error("ode: SUNDIALS allocation failed");
     if (CVodeInit(mem, ode_rhs, t0, y) != CV_SUCCESS) throw std::runtime_error("ode: CVodeInit failed");
-    CVodeSStolerances(mem, s.rtol, s.atol);
-    CVodeSetUserData(mem, &c);
-    CVodeSetLinearSolver(mem, LS, A);
-    CVodeSetMaxNumSteps(mem, s.max_steps);
+    if (CVodeSStolerances(mem, s.rtol, s.atol) != CV_SUCCESS) throw std::runtime_error("ode: bad tolerances");
+    if (CVodeSetUserData(mem, &c) != CV_SUCCESS || CVodeSetLinearSolver(mem, LS, A) != CVLS_SUCCESS ||
+        CVodeSetMaxNumSteps(mem, s.max_steps) != CV_SUCCESS)
+      throw std::runtime_error("ode: CVODE setup failed");
     Mat out(points, s.n + 1);
     out(0, 0) = t0;
     for (int i = 0; i < s.n; i++) out(0, i + 1) = s.y0[i];
@@ -221,7 +256,11 @@ int kin_f(N_Vector u, N_Vector fval, void *user) {
   auto *c = static_cast<KinCtx *>(user);
   std::vector<double> v(c->n);
   for (int i = 0; i < c->n; i++) v[i] = NV_Ith_S(u, i);
-  for (int i = 0; i < c->n; i++) NV_Ith_S(fval, i) = c->f[i]->eval(v.data());
+  for (int i = 0; i < c->n; i++) {
+    double d = c->f[i]->eval(v.data());
+    if (!std::isfinite(d)) return 1;  // recoverable: the line search backs off
+    NV_Ith_S(fval, i) = d;
+  }
   return 0;
 }
 }  // namespace
@@ -229,6 +268,8 @@ int kin_f(N_Vector u, N_Vector fval, void *user) {
 Mat nonlinear_solve(const std::vector<std::string> &eqs, const Mat &guess, double tol) {
   int n = (int)eqs.size();
   if (guess.size() != n) throw std::runtime_error("nlsolve: initial guess length must equal the number of equations");
+  if (!guess.allFinite()) throw std::runtime_error("nlsolve: initial guess is not finite");
+  if (!(tol > 0)) throw std::runtime_error("nlsolve: tolerance must be > 0");
   KinCtx c; c.n = n;
   std::vector<std::string> vars;
   for (int i = 0; i < n; i++) vars.push_back("x" + std::to_string(i));
@@ -241,15 +282,26 @@ Mat nonlinear_solve(const std::vector<std::string> &eqs, const Mat &guess, doubl
   SUNLinearSolver LS = SUNLinSol_Dense(u, A, sc.ctx);
   auto cleanup = [&] { SUNLinSolFree(LS); SUNMatDestroy(A); KINFree(&mem); N_VDestroy(u); N_VDestroy(scale); };
   try {
-    KINInit(mem, kin_f, u);
-    KINSetUserData(mem, &c);
-    KINSetFuncNormTol(mem, tol);
-    KINSetLinearSolver(mem, LS, A);
-    KINSetNumMaxIters(mem, 200);
+    if (!mem || !A || !LS) throw std::runtime_error("nlsolve: SUNDIALS allocation failed");
+    if (KINInit(mem, kin_f, u) != KIN_SUCCESS || KINSetUserData(mem, &c) != KIN_SUCCESS ||
+        KINSetFuncNormTol(mem, tol) != KIN_SUCCESS || KINSetLinearSolver(mem, LS, A) != KINLS_SUCCESS ||
+        KINSetNumMaxIters(mem, 200) != KIN_SUCCESS)
+      throw std::runtime_error("nlsolve: KINSOL setup failed");
     int flag = KINSol(mem, u, KIN_LINESEARCH, scale, scale);
     if (flag < 0) throw std::runtime_error("nlsolve: KINSOL failed (flag " + std::to_string(flag) + "); try another initial guess");
     Mat r(n, 1);
     for (int i = 0; i < n; i++) r(i) = NV_Ith_S(u, i);
+    // KIN_STEP_LT_STPTOL (flag 2) means "stalled", not "solved": accept only a small residual.
+    double res = 0;
+    for (int i = 0; i < n; i++) {
+      double d = c.f[i]->eval(r.data());
+      res = std::isfinite(d) ? std::max(res, std::fabs(d)) : HUGE_VAL;
+    }
+    if (!(res <= tol)) {
+      char m[160];
+      std::snprintf(m, sizeof m, "nlsolve: no solution found (residual %.3g > tolerance %.3g, KINSOL flag %d); try another initial guess", res, tol, flag);
+      throw std::runtime_error(m);
+    }
     cleanup();
     return r;
   } catch (...) { cleanup(); throw; }

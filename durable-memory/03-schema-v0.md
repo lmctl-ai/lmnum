@@ -18,10 +18,17 @@ receiver so calls chain: `num.ode(2).stiff()` and `sys.init(0, 1.0).init(1, 2.0)
   `eig_sym`, `System.solve`, ...). `col`, `row`, `hstack`, `vstack` build and slice.
 - `Num.parse("1 2; 3 4")`: rows separated by `;` or newline, entries by space or comma.
   `Num.load_csv` accepts whitespace or comma separated numbers and skips one alphabetic header row.
-  `save_csv` writes space separated `%.10g` values, one row per line.
-- `random` and `normal` take an integer seed (mt19937-64), so runs are reproducible; results can
-  differ between standard libraries for `normal` (the distribution algorithm is
-  implementation-defined), uniform draws are portable.
+  `save_csv` writes space separated values with the shortest of `%.15g`..`%.17g` that reads back
+  as the same double (exact round trip), one row per line. NaN/inf in matrix text is an error.
+- `random` and `normal` take an integer seed (mt19937-64, fully specified by the standard) and
+  use explicit algorithms (53-bit uniform `(g() >> 11) * 2^-53`, Marsaglia polar normal), not the
+  implementation-defined `std::*_distribution`, so a seed gives the same matrix on libstdc++,
+  libc++ and MinGW (normal draws go through `log`/`sqrt`, so last-ulp libm differences remain
+  possible). `tests/known_answers.lms` pins the first values.
+- Inputs that would give silently wrong answers are errors: numerically singular `solve`
+  (Eigen FullPivLU rank test), non-symmetric `eig_sym`/`eigvec_sym`, non-increasing `interp` x,
+  NaN in `root`, non-finite integrands, negative sizes, bad tolerances, a KINSOL "stalled" exit
+  whose residual is above the tolerance, Nelder-Mead without convergence.
 - Errors (bad index, shape mismatch, singular matrix, parse error, solver failure) throw a host
   error: JSON `{"ok": false, "phase": "run", ...}`, exit code 3.
 - `assert_close(a, b, tol)` fails when `|a-b| > tol` (NaN fails).

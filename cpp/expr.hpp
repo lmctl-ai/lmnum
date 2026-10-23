@@ -41,6 +41,7 @@ class Expr {
   std::vector<std::string> vars_;
   std::map<std::string, double> params_;
   size_t pos_ = 0;
+  int depth_ = 0;
   P root_;
 
   [[noreturn]] void fail(const std::string &m) const {
@@ -68,6 +69,9 @@ class Expr {
     }
   }
   P parse_unary() {
+    // Bound recursion so "((((...))))" or "----x" from a generated string cannot overflow the stack.
+    struct Depth { int &d; explicit Depth(int &x) : d(x) { d++; } ~Depth() { d--; } } guard(depth_);
+    if (depth_ > 500) fail("expression nested too deeply");
     if (eat('-')) return un([](double a) { return -a; }, parse_unary());
     if (eat('+')) return parse_unary();
     return parse_pow();
@@ -87,7 +91,8 @@ class Expr {
     if (c == '(') { pos_++; P e = parse_add(); if (!eat(')')) fail("expected ')'"); return e; }
     if (std::isdigit((unsigned char)c) || c == '.') {
       size_t used = 0;
-      double x = std::stod(src_.substr(pos_), &used);
+      double x = 0;
+      try { x = std::stod(src_.substr(pos_), &used); } catch (...) { fail("bad number"); }
       pos_ += used;
       return std::make_unique<Num>(x);
     }

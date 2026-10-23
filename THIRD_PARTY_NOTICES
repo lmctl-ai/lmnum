@@ -455,7 +455,10 @@ of the program. https://www.gnu.org/licenses/gcc-exception-3.1.html
 glibc (Linux builds)
 --------------------
 The fully static Linux binaries statically link glibc (LGPL v2.1 or later), which permits static
-linking; source at https://www.gnu.org/software/libc/. https://www.gnu.org/licenses/lgpl-2.1.html
+linking provided the user can relink against a modified glibc: the complete lmnum source and build
+(https://github.com/lmctl-ai/lmnum, CMake) is public, so the program can be rebuilt and relinked
+with any glibc; glibc source at https://www.gnu.org/software/libc/.
+https://www.gnu.org/licenses/lgpl-2.1.html
 
 MinGW-w64 runtime (Windows builds)
 ----------------------------------

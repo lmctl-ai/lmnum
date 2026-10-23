@@ -1,0 +1,17 @@
+# Expression grammar: precedence, associativity, unary minus, functions, constants.
+out = ARGV.len() > 0 ? ARGV[0] : "build/expr.dslb";
+p = _dsl_ cli="lmnum";
+num.assert_close(num.eval("2 + 3 * 4"), 14.0, 0.0);
+num.assert_close(num.eval("(2 + 3) * 4"), 20.0, 0.0);
+num.assert_close(num.eval("2 ^ 3 ^ 2"), 512.0, 0.0);       # right associative
+num.assert_close(num.eval("-2 ^ 2"), -4.0, 0.0);           # unary minus binds looser than ^
+num.assert_close(num.eval("2 ** 10"), 1024.0, 0.0);
+num.assert_close(num.eval("2 * -3"), -6.0, 0.0);
+num.assert_close(num.eval("10 / 4 / 5"), 0.5, 0.0);        # left associative
+num.assert_close(num.eval("max(3, min(9, 4))"), 4.0, 0.0);
+num.assert_close(num.eval("atan2(1, 1) * 4"), num.eval("pi"), 0.000000000001);
+num.assert_close(num.eval("exp(1) - e"), 0.0, 0.000000000001);
+num.assert_close(num.eval("sqrt(16) + abs(-2) + floor(2.7) + ceil(2.1)"), 11.0, 0.0);
+num.assert_close(num.eval("1e3 + .5"), 1000.5, 0.0);
+end _dsl_
+savedsl(p, out);

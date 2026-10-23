@@ -1,0 +1,19 @@
+# Stiff ODEs: the Robertson chemical kinetics problem needs the BDF method (stiff()).
+# Rates span nine orders of magnitude; an explicit method would need billions of steps.
+# Mass is conserved (y0 + y1 + y2 = 1), which the program checks.
+out = ARGV.len() > 0 ? ARGV[0] : "build/ode_stiff.dslb";
+p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let sys = num.ode(3).stiff();
+sys.rhs(0, "-0.04*y0 + 10000*y1*y2");
+sys.rhs(1, "0.04*y0 - 10000*y1*y2 - 30000000*y1*y1");
+sys.rhs(2, "30000000*y1*y1");
+sys.init(0, 1.0);
+sys.tol(0.00000001, 0.000000000001);
+let sol = sys.solve(0.0, 40.0, 41);
+let last = sol.row(40);
+num.print("y(40) = " + last.to_text());
+num.assert_close(last.get(0, 1) + last.get(0, 2) + last.get(0, 3), 1.0, 0.0000001);
+num.assert_close(last.get(0, 1), 0.7158, 0.001);   # reference value from the literature
+end _dsl_
+savedsl(p, out);
+println(f"wrote {out}");

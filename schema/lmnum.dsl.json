@@ -1,0 +1,531 @@
+{
+  "dsl.schema": 2,
+  "name": "lmnum",
+  "types": {
+    "Num": {
+      "methods": {
+        "matrix": [
+          {
+            "params": [
+              "int",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "identity": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "parse": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "linspace": [
+          {
+            "params": [
+              "float",
+              "float",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "random": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "normal": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "load_csv": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "eval": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "float"
+          }
+        ],
+        "func": [
+          {
+            "params": [
+              "string",
+              "string"
+            ],
+            "returns": "Func"
+          }
+        ],
+        "ode": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "Ode"
+          }
+        ],
+        "system": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "System"
+          }
+        ],
+        "integrate": [
+          {
+            "params": [
+              "string",
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
+        "root": [
+          {
+            "params": [
+              "string",
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
+        "minimize": [
+          {
+            "params": [
+              "string",
+              "string",
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "polyfit": [
+          {
+            "params": [
+              "Matrix",
+              "Matrix",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "polyval": [
+          {
+            "params": [
+              "Matrix",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
+        "interp": [
+          {
+            "params": [
+              "Matrix",
+              "Matrix",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
+        "assert_close": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "void"
+          }
+        ],
+        "print": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ],
+        "version": [
+          {
+            "params": [],
+            "returns": "string"
+          }
+        ]
+      }
+    },
+    "Matrix": {
+      "methods": {
+        "rows": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ],
+        "cols": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ],
+        "get": [
+          {
+            "params": [
+              "int",
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "set": [
+          {
+            "params": [
+              "int",
+              "int",
+              "float"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "copy": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "add": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "sub": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "hadamard": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "mul": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "scale": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "shift": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "transpose": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "inverse": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "det": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "trace": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "norm": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "solve": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "lstsq": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "eig_sym": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "eigvec_sym": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "svd_values": [
+          {
+            "params": [],
+            "returns": "Matrix"
+          }
+        ],
+        "col": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "row": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "hstack": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "vstack": [
+          {
+            "params": [
+              "Matrix"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "sum": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "mean": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "min": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "max": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "std": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "map": [
+          {
+            "params": [
+              "Func"
+            ],
+            "returns": "Matrix"
+          }
+        ],
+        "to_text": [
+          {
+            "params": [],
+            "returns": "string"
+          }
+        ],
+        "save_csv": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ]
+      }
+    },
+    "Func": {
+      "methods": {
+        "eval": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "float"
+          }
+        ],
+        "eval2": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "float"
+          }
+        ]
+      }
+    },
+    "Ode": {
+      "methods": {
+        "rhs": [
+          {
+            "params": [
+              "int",
+              "string"
+            ],
+            "returns": "Ode"
+          }
+        ],
+        "init": [
+          {
+            "params": [
+              "int",
+              "float"
+            ],
+            "returns": "Ode"
+          }
+        ],
+        "param": [
+          {
+            "params": [
+              "string",
+              "float"
+            ],
+            "returns": "Ode"
+          }
+        ],
+        "tol": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "Ode"
+          }
+        ],
+        "stiff": [
+          {
+            "params": [],
+            "returns": "Ode"
+          }
+        ],
+        "solve": [
+          {
+            "params": [
+              "float",
+              "float",
+              "int"
+            ],
+            "returns": "Matrix"
+          }
+        ]
+      }
+    },
+    "System": {
+      "methods": {
+        "eq": [
+          {
+            "params": [
+              "int",
+              "string"
+            ],
+            "returns": "System"
+          }
+        ],
+        "solve": [
+          {
+            "params": [
+              "Matrix",
+              "float"
+            ],
+            "returns": "Matrix"
+          }
+        ]
+      }
+    }
+  },
+  "functions": {},
+  "context": {
+    "num": "Num"
+  }
+}

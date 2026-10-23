@@ -1,0 +1,43 @@
+# Linear algebra with Eigen: solve, inverse, determinant, eigenvalues, SVD, least squares.
+# Every result is checked with num.assert_close, so the program fails loudly if a number is off.
+out = ARGV.len() > 0 ? ARGV[0] : "build/linear_algebra.dslb";
+p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+# A small symmetric system A x = b with a known solution x = (1, 2, 3).
+let a = num.parse("4 1 0; 1 3 1; 0 1 2");
+let x_true = num.parse("1; 2; 3");
+let b = a.mul(x_true);
+let x = a.solve(b);
+num.print("A =\n" + a.to_text());
+num.print("b =\n" + b.to_text());
+num.print("x =\n" + x.to_text());
+num.assert_close(x.sub(x_true).norm(), 0.0, 0.000000000001);
+
+# det, trace and the inverse: A * inv(A) = I
+num.assert_close(a.det(), 18.0, 0.000000000001);
+num.assert_close(a.trace(), 9.0, 0.000000000001);
+let id = a.mul(a.inverse());
+num.assert_close(id.sub(num.identity(3)).norm(), 0.0, 0.000000000001);
+
+# Eigenvalues of a symmetric matrix (ascending); their sum is the trace, their product the determinant.
+let ev = a.eig_sym();
+num.print("eigenvalues:\n" + ev.to_text());
+num.assert_close(ev.sum(), a.trace(), 0.000000000001);
+num.assert_close(ev.get(0, 0) * ev.get(1, 0) * ev.get(2, 0), a.det(), 0.00000001);
+
+# Singular values of a rectangular matrix; the largest bounds the Frobenius norm from below.
+let r = num.parse("1 2; 3 4; 5 6");
+let sv = r.svd_values();
+num.print("singular values:\n" + sv.to_text());
+num.assert_close(sv.get(0, 0), 9.52551809, 0.000001);
+
+# Least squares: fit y = c0 + c1 t through noisy-free points of y = 1 + 2t.
+let t = num.linspace(0.0, 4.0, 5);
+let design = num.matrix(5, 1).shift(1.0).hstack(t);
+let y = t.scale(2.0).shift(1.0);
+let c = design.lstsq(y);
+num.print("coefficients:\n" + c.to_text());
+num.assert_close(c.get(0, 0), 1.0, 0.000000001);
+num.assert_close(c.get(1, 0), 2.0, 0.000000001);
+end _dsl_
+savedsl(p, out);
+println(f"wrote {out}");

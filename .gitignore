@@ -1,0 +1,6 @@
+build*/
+third_party/
+*.dslb
+.DS_Store
+lmnum.lmctl
+p1.txt

@@ -1,0 +1,32 @@
+# Integration, root finding, minimization, nonlinear systems, interpolation and polynomial fits.
+out = ARGV.len() > 0 ? ARGV[0] : "build/calculus.dslb";
+p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+# adaptive Gauss-Kronrod: the Gaussian integral and an integral with a known closed form
+num.assert_close(num.integrate("exp(-x^2)", "x", -8.0, 8.0), sqrt(num.eval("pi")), 0.000000001);
+num.assert_close(num.integrate("x*sin(x)", "x", 0.0, num.eval("pi")), num.eval("pi"), 0.000000001);
+# Brent root finding: sqrt(2) and the Dottie number cos(x) = x
+num.assert_close(num.root("x^2 - 2", "x", 0.0, 2.0), sqrt(2.0), 0.0000000001);
+let dottie = num.root("cos(x) - x", "x", 0.0, 1.0);
+num.print("Dottie number: " + str(dottie));
+num.assert_close(dottie, 0.7390851332, 0.000000001);
+# Nelder-Mead on the Rosenbrock valley: minimum at (1, 1)
+let best = num.minimize("(1-x)^2 + 100*(y-x^2)^2", "x,y", num.parse("-1.2; 1.0"));
+num.print("Rosenbrock minimum: " + best.to_text());
+num.assert_close(best.get(0, 0), 1.0, 0.0001);
+num.assert_close(best.get(1, 0), 1.0, 0.0001);
+# KINSOL: intersection of a circle and a line, x0^2 + x1^2 = 4 and x0 = x1
+let eqs = num.system(2);
+eqs.eq(0, "x0^2 + x1^2 - 4").eq(1, "x0 - x1");
+let pt = eqs.solve(num.parse("1; 0.5"), 0.0000000001);
+num.assert_close(pt.get(0, 0), sqrt(2.0), 0.000000001);
+# polynomial fit and evaluation, linear interpolation
+let xs = num.linspace(-2.0, 2.0, 9);
+let ys = xs.map(num.func("3*x^2 - x + 0.5", "x"));
+let coef = num.polyfit(xs, ys, 2);
+num.print("fitted coefficients (ascending powers):\n" + coef.to_text());
+num.assert_close(coef.get(2, 0), 3.0, 0.00000001);
+num.assert_close(num.polyval(coef, 1.5), 3.0 * 2.25 - 1.5 + 0.5, 0.00000001);
+num.assert_close(num.interp(xs, ys, 0.25), 0.5 * (ys.get(4, 0) + ys.get(5, 0)), 0.5);
+end _dsl_
+savedsl(p, out);
+println(f"wrote {out}");

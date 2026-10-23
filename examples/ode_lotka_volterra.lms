@@ -1,0 +1,29 @@
+# ODE integration with SUNDIALS CVODE: predator-prey (Lotka-Volterra) dynamics.
+# Equations are expression strings over t, y0, y1 and named parameters; the solution comes back
+# as a matrix with columns t, y0, y1. The motion conserves V = d*y0 - c*ln(y0) + b*y1 - a*ln(y1),
+# which the program checks along the whole trajectory.
+out = ARGV.len() > 0 ? ARGV[0] : "build/ode_lotka_volterra.dslb";
+mkdir("build/examples");
+p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let sys = num.ode(2);
+sys.param("a", 1.1).param("b", 0.4).param("c", 0.4).param("d", 0.1);
+sys.rhs(0, "a*y0 - b*y0*y1");      # prey
+sys.rhs(1, "d*y0*y1 - c*y1");      # predators
+sys.init(0, 10.0).init(1, 10.0);
+sys.tol(0.0000000001, 0.000000000001);
+let sol = sys.solve(0.0, 60.0, 601);
+sol.save_csv("build/examples/lotka_volterra.csv");
+num.print("rows " + str(sol.rows()) + ", columns " + str(sol.cols()));
+let inv = num.func("0.1*a - 0.4*log(a) + 0.4*b - 1.1*log(b)", "a,b");
+let v0 = inv.eval2(10.0, 10.0);
+let worst = 0.0;
+for (i in range(0, sol.rows())) {
+  let r = sol.row(i);
+  let v = inv.eval2(r.get(0, 1), r.get(0, 2));
+  worst = max(worst, abs(v - v0));
+}
+num.print("largest drift of the invariant: " + str(worst));
+num.assert_close(worst, 0.0, 0.000001);
+end _dsl_
+savedsl(p, out);
+println(f"wrote {out}");

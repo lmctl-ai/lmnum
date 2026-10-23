@@ -216,6 +216,9 @@ Mat ode_solve(const OdeSpec &s, double t0, double t1, int points) {
   c.n = s.n;
   std::vector<std::string> vars{"t"};
   for (int i = 0; i < s.n; i++) vars.push_back("y" + std::to_string(i));
+  for (const auto &kv : s.params)  // variables win over parameters in Expr: a clash would be silently ignored
+    if (std::find(vars.begin(), vars.end(), kv.first) != vars.end())
+      throw std::runtime_error("ode: parameter '" + kv.first + "' has the name of a variable (t, y0..y" + std::to_string(s.n - 1) + ")");
   for (int i = 0; i < s.n; i++) {
     if (s.rhs[i].empty()) throw std::runtime_error("ode: equation " + std::to_string(i) + " has no rhs");
     c.f.push_back(std::make_unique<Expr>(s.rhs[i], vars, s.params));

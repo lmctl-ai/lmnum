@@ -120,6 +120,7 @@ expect_error badtol 'let o = num.ode(1).tol(-1.0, 0.0);' "Ode.tol"
 expect_error badsystol 'let x = num.system(1).eq(0, "x0^2 - 2").solve(num.parse("1"), -1.0);' "tolerance"
 expect_error nosolution 'let x = num.system(1).eq(0, "x0^2 + 1").solve(num.parse("1"), 0.0000000001);' "nlsolve"
 expect_error manypoints 'let o = num.ode(1).rhs(0, "-y0").init(0, 1.0); let s = o.solve(0.0, 1.0, 4294967299);' "points"
+expect_error shadowparam 'let o = num.ode(1).param("t", 2.0).rhs(0, "-t*y0").init(0, 1.0); let s = o.solve(0.0, 1.0, 3);' "name of a variable"
 expect_error badnumber 'let x = num.eval("1e999");' "bad number"
 ok "errors stop the program with exit 3 and a clear message ($nerr cases)"
 

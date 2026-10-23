@@ -1,5 +1,6 @@
 # Linear algebra with Eigen: solve, inverse, determinant, eigenvalues, SVD, least squares.
 # Every result is checked with num.assert_close, so the program fails loudly if a number is off.
+mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/linear_algebra.dslb";
 p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 # A small symmetric system A x = b with a known solution x = (1, 2, 3).

@@ -2,6 +2,7 @@
 # Equations are expression strings over t, y0, y1 and named parameters; the solution comes back
 # as a matrix with columns t, y0, y1. The motion conserves V = d*y0 - c*ln(y0) + b*y1 - a*ln(y1),
 # which the program checks along the whole trajectory.
+mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/ode_lotka_volterra.dslb";
 mkdir("build/examples");
 p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";

@@ -1,4 +1,5 @@
 # Integration, root finding, minimization, nonlinear systems, interpolation and polynomial fits.
+mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/calculus.dslb";
 p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 # adaptive Gauss-Kronrod: the Gaussian integral and an integral with a known closed form

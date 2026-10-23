@@ -42,7 +42,7 @@
 
 | ![linear_regression](docs/images/linear_regression.png) | ![svd_compression](docs/images/svd_compression.png) |
 | --- | --- |
-| Least squares with 95% confidence and prediction bands; the true line sits inside three standard errors.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/linear_regression.lms` | SVD image compression: rank 1, 4, 16 against the original, energy captured (needs lmnum 0.1.2).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/svd_compression.lms` |
+| Least squares with 95% confidence and prediction bands; the true line sits inside three standard errors.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/linear_regression.lms` | SVD image compression: rank 1, 4, 16 against the original, energy captured.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/svd_compression.lms` |
 
 | ![pca_ellipse](docs/images/pca_ellipse.png) | ![polyfit_overfit](docs/images/polyfit_overfit.png) |
 | --- | --- |
@@ -68,9 +68,9 @@
 
 | ![nelder_mead](docs/images/nelder_mead.png) | |
 | --- | --- |
-| Nelder-Mead simplex paths down the Rosenbrock valley and into three of Himmelblau's four minima (needs lmnum 0.1.2).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/nelder_mead.lms` | |
+| Nelder-Mead simplex paths down the Rosenbrock valley and into three of Himmelblau's four minima.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/nelder_mead.lms` | |
 
-Each command runs the example from any empty directory: lmnum computes, [lmplot](https://github.com/lmctl-ai/lmplot) or [lmdraw](https://github.com/lmctl-ai/lmdraw) draws, and the picture lands in `images/`. `examples/render-all.sh` regenerates `docs/images/` from a checkout. Two examples (`svd_compression`, `nelder_mead`) use `svd_u`/`svd_v` and `minimize_path`, which are in the source but not yet in a tagged release: they need lmnum 0.1.2 (`@latest` is 0.1.1 until it is tagged; build from source or run them with the repo's `build/lmnum` on `PATH`).
+Each command runs the example from any empty directory: lmnum computes, [lmplot](https://github.com/lmctl-ai/lmplot) or [lmdraw](https://github.com/lmctl-ai/lmdraw) draws, and the picture lands in `images/`. `examples/render-all.sh` regenerates `docs/images/` from a checkout.
 
 **Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above.
 
@@ -147,8 +147,8 @@ integrates the Lorenz system with lmnum and draws it with [lmplot](https://githu
 | [gallery/burgers.lms](examples/gallery/burgers.lms) | 399 points, BDF; characteristics solved with `root` at t = 0.1, slope at the origin -152 (Basdevant) to 5% | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/burgers.lms` |
 | [gallery/quadrature_orders.lms](examples/gallery/quadrature_orders.lms) | orders 2, 2, 4 from log2 error ratios, 0.5 on 1/sqrt(x); Gauss-Kronrod `integrate` reaches 1e-7 on the singular one | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/quadrature_orders.lms` |
 | [gallery/monte_carlo.lms](examples/gallery/monte_carlo.lms) | `random` in 2-D and 6-D, rms error over seeds against sqrt(p(1-p)/N), fitted slope -0.5 | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/monte_carlo.lms` |
-| [gallery/nelder_mead.lms](examples/gallery/nelder_mead.lms) | `minimize_path` (lmnum 0.1.2): Rosenbrock from (-1.5, 2) to (1, 1) in 1e-4; Himmelblau from three starts to three minima | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/nelder_mead.lms` |
-| [gallery/svd_compression.lms](examples/gallery/svd_compression.lms) | `svd_u`, `svd_values`, `svd_v` (lmnum 0.1.2): full rank rebuilds exactly, Eckart-Young error = dropped energy | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/svd_compression.lms` |
+| [gallery/nelder_mead.lms](examples/gallery/nelder_mead.lms) | `minimize_path`: Rosenbrock from (-1.5, 2) to (1, 1) in 1e-4; Himmelblau from three starts to three minima | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/nelder_mead.lms` |
+| [gallery/svd_compression.lms](examples/gallery/svd_compression.lms) | `svd_u`, `svd_values`, `svd_v`: full rank rebuilds exactly, Eckart-Young error = dropped energy | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/svd_compression.lms` |
 | [gallery/membrane_modes.lms](examples/gallery/membrane_modes.lms) | `eig_sym` on the 2-D Laplacian: eigenvalues to 1e-9 against the discrete formula, 1% against (m^2 + n^2) pi^2 | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/membrane_modes.lms` |
 | [gallery/spectrum_dft.lms](examples/gallery/spectrum_dft.lms) | cos/sin matrices times the signal: peaks at 5 and 30 Hz exact, Parseval to 1e-9, leakage of the off-bin tone | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/spectrum_dft.lms` |
 | [gallery/markov_chain.lms](examples/gallery/markov_chain.lms) | stationary distribution 21/46, 13/46, 12/46 by `solve`; P^16 rows within 1e-5; eigenvalues 0.3 +- sqrt(0.03) by `det` | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/markov_chain.lms` |

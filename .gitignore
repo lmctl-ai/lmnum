@@ -4,5 +4,5 @@ third_party/
 .DS_Store
 lmnum.lmctl
 p1.txt
-images/
-data/
+/images/
+/data/

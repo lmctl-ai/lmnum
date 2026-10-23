@@ -124,6 +124,34 @@ expect_error shadowparam 'let o = num.ode(1).param("t", 2.0).rhs(0, "-t*y0").ini
 expect_error badnumber 'let x = num.eval("1e999");' "bad number"
 ok "errors stop the program with exit 3 and a clear message ($nerr cases)"
 
+# Memory budget: a runaway allocation loop stops with a run error (exit 3, message on stderr and in
+# the JSON line) instead of exhausting the machine. A small budget everywhere; on Linux also the
+# default 4096 MiB under a 6 GiB address-space limit (ulimit only here, never in the host).
+cat >"$WORK/runaway.lms" <<LMS
+p = _dsl_ cli="lmnum";
+let i = 0;
+while (i < 1000000) {
+  let m = num.random(1000, 1000, i);
+  i = i + 1;
+}
+end _dsl_
+savedsl(p, "$WORK/runaway.dslb");
+LMS
+"$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
+set +e; out="$(LMNUM_MAX_MEMORY_MB=64 "$HOST" --dsl "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+[ "$code" = 3 ] || fail "runaway loop under LMNUM_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
+echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
+grep -q "LMNUM_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
+set +e; LMNUM_MAX_MEMORY_MB=-5 "$HOST" --dsl "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+[ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMNUM_MAX_MEMORY_MB: exit $code"
+if [ "$UNAME_S" = Linux ]; then
+  set +e; out="$(ulimit -v 6291456; "$HOST" --dsl "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
+  ok "memory budget: runaway loop stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB)"
+else
+  ok "memory budget: runaway loop stops at LMNUM_MAX_MEMORY_MB=64 (default-budget run is Linux-only)"
+fi
+
 # README gallery: every linked example and image exists, images are valid PNG/GIF within the size limits.
 magic_ok() { # file
   case "$1" in

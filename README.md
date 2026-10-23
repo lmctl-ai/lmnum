@@ -90,6 +90,12 @@ cmake -S . -B build && cmake --build build
 Linux builds are fully static; macOS links only system libraries; Windows links the MinGW runtime
 statically. `lmnum --notices` prints the license texts of everything inside.
 
+## Resource limits
+
+A program may use at most 4096 MiB in total (matrices, solver state, everything the host keeps);
+beyond that it stops with a run error (exit 3) naming the limit, instead of exhausting the machine.
+Set `LMNUM_MAX_MEMORY_MB` to change it, e.g. `LMNUM_MAX_MEMORY_MB=16384 lmscript big.lms`.
+
 ## License
 
 MIT ([LICENSE](LICENSE)). SUNDIALS is BSD-3-Clause; Eigen is MPL-2.0 (used with `EIGEN_MPL2_ONLY`,

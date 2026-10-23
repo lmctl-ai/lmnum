@@ -18,6 +18,7 @@
 
 #include "dslvm.hpp"
 #include "expr.hpp"
+#include "memory_budget.hpp"
 #include "notices_embedded.hpp"
 #include "numeric.hpp"
 #include "schema_embedded.hpp"
@@ -42,7 +43,11 @@ struct Host {
     arena.push_back(std::make_unique<T>(std::move(v)));
     return Value::object(type, arena.back().get());
   }
-  Value mat(Mat m) { return hold(mats, "Matrix", std::move(m)); }
+  // Matrix payloads come from Eigen's malloc, outside operator new: count them while the arena keeps them.
+  Value mat(Mat m) {
+    membudget::charge(std::size_t(m.size()) * sizeof(double));
+    return hold(mats, "Matrix", std::move(m));
+  }
 };
 
 template <class F> Value translate(F &&fn) {
@@ -104,6 +109,7 @@ void need_dims(int64_t r, int64_t c, const char *who) {
   if (r < 0 || c < 0 || r > 100000000 || c > 100000000 || (r > 0 && c > 100000000 / r))
     throw dslvm::Error(std::string(who) + ": bad size " + std::to_string(r) + "x" + std::to_string(c) +
                        " (rows and columns must be >= 0, at most 1e8 entries)");
+  membudget::require(std::size_t(r) * std::size_t(c) * sizeof(double));  // fail before allocating
 }
 void need_finite(const Mat &m, const char *who) {
   if (!m.allFinite()) throw dslvm::Error(std::string(who) + ": matrix contains NaN or infinity");
@@ -398,7 +404,9 @@ void register_host(dslvm::Registry &r, Host &h) {
   });
 }
 
-const char *usage = "usage: lmnum --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n";
+const char *usage = "usage: lmnum --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n"
+                    "environment: LMNUM_MAX_MEMORY_MB  total memory budget in MiB (default 4096); a program that needs more\n"
+                    "             stops with a run error (exit 3) instead of allocating\n";
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -429,6 +437,7 @@ int main(int argc, char **argv) {
   if (argc <= first || std::string(argv[first - 1]) != "--dsl") { std::cerr << usage; return 2; }
   for (int i = first; i < argc; i++)
     if (std::string(argv[i]).empty() || std::string(argv[i]).rfind("--", 0) == 0) { std::cerr << usage; return 2; }
+  if (!membudget::configure("lmnum", "LMNUM_MAX_MEMORY_MB")) { std::cerr << usage; return 2; }
   const std::string schema(reinterpret_cast<const char *>(lmnum::embedded_schema), lmnum::embedded_schema_size);
   dslvm::Context context;
   context.set("num", &host);
@@ -436,10 +445,12 @@ int main(int argc, char **argv) {
   for (int i = first; i < argc; i++) {
     try { programs.push_back(dslvm::Program::load(dslvm::read_file(argv[i]), schema, reg)); }
     catch (const dslvm::Error &e) { return dslvm::report_error("load", e); }
+    catch (const std::exception &e) { return dslvm::report_error("load", dslvm::Error(e.what())); }
   }
   for (const auto &p : programs) {
     try { p.run(context, reg); }
     catch (const dslvm::Error &e) { return dslvm::report_error("run", e); }
+    catch (const std::exception &e) { return dslvm::report_error("run", dslvm::Error(e.what())); }  // budget in the VM
     dslvm::report_ok();
   }
   return 0;

@@ -41,7 +41,7 @@ set(SUNDIALS_INDEX_SIZE 64 CACHE STRING "" FORCE)
 set(EXAMPLES_ENABLE_C OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/sundials EXCLUDE_FROM_ALL)
 
-add_executable(lmnum cpp/main.cpp cpp/numeric.cpp)
+add_executable(lmnum cpp/main.cpp cpp/numeric.cpp cpp/memory_budget.cpp)
 target_compile_definitions(lmnum PRIVATE LMNUM_VERSION="${PROJECT_VERSION}" EIGEN_MPL2_ONLY)
 target_include_directories(lmnum PRIVATE cpp "${GEN}" third_party/eigen)
 target_link_libraries(lmnum PRIVATE sundials_cvode_static sundials_kinsol_static sundials_nvecserial_static

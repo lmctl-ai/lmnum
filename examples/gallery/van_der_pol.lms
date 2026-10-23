@@ -17,7 +17,7 @@ for (k in range(0, 6)) {
   if (k == 5) { x0 = -1.0; v0 = 5.0; }
   sys.init(0, x0).init(1, v0);
   sys.tol(0.00000001, 0.0000000001);
-  let sol = sys.solve(0.0, 25.0, 1000);
+  let sol = sys.solve(0.0, 25.0, 5001);
   sol.save_csv("data/vdp_" + str(k) + ".csv");
   # a start inside the cycle grows to the cycle amplitude max|x| = 2.02 (mu = 1.5)
   if (k == 0) { num.assert_close(sol.col(1).max(), 2.0, 0.05); }

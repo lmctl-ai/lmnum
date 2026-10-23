@@ -2,22 +2,51 @@
 
 **Numerical computing for lmscript in one static executable: Eigen, SUNDIALS, integration, root finding, optimization and fitting.**
 
-| | | |
-| :---: | :---: | :---: |
-| <img src="docs/images/lorenz.gif" width="300"><br>Lorenz butterfly, animated<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/lorenz_anim.lms</code></sub> | <img src="docs/images/predator_prey.png" width="300"><br>Predator-prey cycles: time series and conserved orbits<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/predator_prey.lms</code></sub> | <img src="docs/images/van_der_pol.png" width="300"><br>Van der Pol: every start reaches the limit cycle<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/van_der_pol.lms</code></sub> |
-| <img src="docs/images/stiff_kinetics.png" width="300"><br>Stiff Robertson kinetics over 12 decades<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/stiff_kinetics.lms</code></sub> | <img src="docs/images/heat_diffusion.png" width="300"><br>Heat equation: CVODE points on the exact curves<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/heat_diffusion.lms</code></sub> | <img src="docs/images/newton_fractal.png" width="300"><br>Newton fractal: root-finding basins of z^3 = 1<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/newton_fractal.lms</code></sub> |
-| <img src="docs/images/polyfit_overfit.png" width="300"><br>Polynomial fits: underfit, good fit, overfit<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/polyfit_overfit.lms</code></sub> | <img src="docs/images/pca_ellipse.png" width="300"><br>PCA of a seeded cloud via symmetric eigendecomposition<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/pca_ellipse.lms</code></sub> | <img src="docs/images/lorenz_attractor.png" width="300"><br>Lorenz attractor, x-z projection coloured by time<br><sub><code>lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/lorenz_attractor.lms</code></sub> |
+[![CI](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Each command runs the example from any empty directory: lmnum computes, [lmplot](https://github.com/lmctl-ai/lmplot) draws,
-and the picture lands in `images/`. `examples/render-all.sh` regenerates `docs/images/` from a checkout.
+### Differential equations
+
+| ![predator_prey](docs/images/predator_prey.png) | ![van_der_pol](docs/images/van_der_pol.png) |
+| --- | --- |
+| Lotka-Volterra: populations in time and closed orbits in phase space.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/predator_prey.lms` | Van der Pol oscillator: every start converges to the limit cycle.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/van_der_pol.lms` |
+
+| ![stiff_kinetics](docs/images/stiff_kinetics.png) | ![sir_epidemic](docs/images/sir_epidemic.png) |
+| --- | --- |
+| Robertson kinetics over twelve decades of time (stiff, BDF).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/stiff_kinetics.lms` | An epidemic and the equation that predicts its size: CVODE against a root finder.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/sir_epidemic.lms` |
+
+| ![heat_diffusion](docs/images/heat_diffusion.png) | |
+| --- | --- |
+| The heat equation as a stiff ODE system, numerical points on the exact curves.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/heat_diffusion.lms` | |
+
+### Chaos and nonlinear maps
+
+| ![lorenz_attractor](docs/images/lorenz_attractor.png) | ![lorenz_anim](docs/images/lorenz.gif) |
+| --- | --- |
+| The Lorenz attractor, coloured by time.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/lorenz_attractor.lms` | The Lorenz butterfly, animated (needs ffmpeg).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/lorenz_anim.lms` |
+
+| ![logistic_bifurcation](docs/images/logistic_bifurcation.png) | ![newton_fractal](docs/images/newton_fractal.png) |
+| --- | --- |
+| Route to chaos: bifurcation diagram and Lyapunov exponent of the logistic map.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/logistic_bifurcation.lms` | Newton's method for z^3 = 1: basins of attraction.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/newton_fractal.lms` |
+
+### Linear algebra and fitting
+
+| ![hilbert_conditioning](docs/images/hilbert_conditioning.png) | ![vibration_modes](docs/images/vibration_modes.png) |
+| --- | --- |
+| Ill-conditioning: Hilbert matrices, condition number and solution error.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/hilbert_conditioning.lms` | Normal modes of a chain of masses: eigenvalues and mode shapes.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/vibration_modes.lms` |
+
+| ![pca_ellipse](docs/images/pca_ellipse.png) | ![polyfit_overfit](docs/images/polyfit_overfit.png) |
+| --- | --- |
+| PCA of 500 samples: principal axes and sigma ellipses.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/pca_ellipse.lms` | Polynomial fits of noisy points: underfit, good fit, overfit.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/polyfit_overfit.lms` |
+
+Each command runs the example from any empty directory: lmnum computes, [lmplot](https://github.com/lmctl-ai/lmplot) draws, and the picture lands in `images/`. `examples/render-all.sh` regenerates `docs/images/` from a checkout.
+
+**Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above.
 
 Eigen linear algebra, SUNDIALS ODE and nonlinear solvers, integration, root finding, optimization and
 fitting, with no Python and no BLAS. It is a scripting
 host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
 `_dsl_` block, compile it, run it with `lmnum --dsl`. One static executable, no shared libraries.
-
-[![CI](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ```
 # lotka-volterra.lms
@@ -75,6 +104,10 @@ integrates the Lorenz system with lmnum and draws it with [lmplot](https://githu
 | [gallery/newton_fractal.lms](examples/gallery/newton_fractal.lms) | 160 000 Newton iterations written in lmscript loops | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/newton_fractal.lms` |
 | [gallery/polyfit_overfit.lms](examples/gallery/polyfit_overfit.lms) | seeded noise, `polyfit` of degree 1, 3, 9 | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/polyfit_overfit.lms` |
 | [gallery/pca_ellipse.lms](examples/gallery/pca_ellipse.lms) | covariance eigenvalues checked against the population values | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/pca_ellipse.lms` |
+| [gallery/sir_epidemic.lms](examples/gallery/sir_epidemic.lms) | SIR epidemic: final size from CVODE against the Brent root of s = S0 exp(-R0 (1 - s)) | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/sir_epidemic.lms` |
+| [gallery/logistic_bifurcation.lms](examples/gallery/logistic_bifurcation.lms) | bifurcation diagram and Lyapunov exponent; period-2 points and exponent asserted | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/logistic_bifurcation.lms` |
+| [gallery/hilbert_conditioning.lms](examples/gallery/hilbert_conditioning.lms) | condition number from `svd_values` against the error of `solve` | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/hilbert_conditioning.lms` |
+| [gallery/vibration_modes.lms](examples/gallery/vibration_modes.lms) | 24-mass chain: `eig_sym` against 2 - 2 cos(k pi / 25) | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/vibration_modes.lms` |
 | [gallery/lorenz_anim.lms](examples/gallery/lorenz_anim.lms) | 90 frames drawn by lmplot, encoded with ffmpeg | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/lorenz_anim.lms` |
 
 ## Build

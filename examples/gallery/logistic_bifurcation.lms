@@ -1,0 +1,59 @@
+# The route to chaos: the logistic map x -> r x (1 - x). For every r from 2.5 to 4 the script iterates 300 steps to let the
+# transient die and records 70 more; the Lyapunov exponent is the mean of ln |r (1 - 2 x)| along the orbit (the natural log
+# comes from lmnum's expression evaluator). Period doubling at r = 3, 3.449 and 3.544, chaos from 3.5699, the period-3
+# window near 3.83. The script asserts the closed-form period-2 points at r = 3.2 and a positive exponent at r = 3.9.
+# Output: images/logistic_bifurcation.png   (run: lmctl autorun <raw url of this file>)
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let lyap = num.func("log(abs(r * (1 - 2 * x)))", "r,x");
+let orbit = num.func("r * x * (1 - x)", "r,x");
+for (k in range(0, 601)) {
+  let r = 2.5 + 0.0025 * float(k);
+  let x = 0.4;
+  for (i in range(0, 300)) { x = orbit.eval2(r, x); }
+  let sum = 0.0;
+  for (i in range(0, 70)) {
+    x = orbit.eval2(r, x);
+    sum = sum + lyap.eval2(r, x);
+    num.print(str(r) + " " + str(x));
+  }
+  num.print("L " + str(r) + " " + str(sum / 70.0));
+}
+let r32 = 3.2;
+let y = 0.4;
+for (i in range(0, 2000)) { y = orbit.eval2(r32, y); }
+let y2 = orbit.eval2(r32, y);
+let d = sqrt(4.2 * 0.2);
+let hi = (4.2 + d) / 6.4;
+let lo = (4.2 - d) / 6.4;
+num.assert_close(max(y, y2), hi, 0.000001);
+num.assert_close(min(y, y2), lo, 0.000001);
+let z = 0.4;
+let acc = 0.0;
+for (i in range(0, 3000)) { z = orbit.eval2(3.9, z); }
+for (i in range(0, 20000)) { z = orbit.eval2(3.9, z); acc = acc + lyap.eval2(3.9, z); }
+num.assert_close(acc / 20000.0, 0.49, 0.03);
+end _dsl_
+savedsl(sim, "data/logistic_bifurcation-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/logistic_bifurcation-sim.dslb;
+assert(r.code == 0);
+write_file("data/logistic.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/logistic_bifurcation.png", 1000, 820);
+plot.cmd("set multiplot layout 2,1");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
+plot.cmd("set title 'Bifurcation diagram of the logistic map'");
+plot.cmd("set xlabel ''; set ylabel 'x on the attractor'; set xrange [2.5:4]; set yrange [0:1]; unset key");
+plot.cmd("plot 'data/logistic.txt' u 1:2 w dots lc rgb '#1f4e9a'");
+plot.cmd("set title 'Lyapunov exponent: negative on periodic windows, positive in chaos'");
+plot.cmd("set xlabel 'r'; set ylabel 'Lyapunov exponent'; set yrange [-2:0.8]");
+plot.cmd("plot 'data/logistic.txt' u 2:3 w l lw 2 lc rgb '#d62728', 0 w l lc rgb 'black' dt 2");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/logistic_bifurcation-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/logistic_bifurcation-draw.dslb;
+assert(r.code == 0);
+println("wrote images/logistic_bifurcation.png");

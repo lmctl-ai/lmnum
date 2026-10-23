@@ -1,0 +1,67 @@
+# An epidemic, and the equation that predicts its size. The SIR model S' = -b S I, I' = b S I - g I, R' = g I (recovery
+# after 5 days, g = 0.2 per day, 0.1 per cent infected at the start) is integrated by CVODE for three basic reproduction
+# numbers R0 = b / g. The final attack rate must also solve s = S0 exp(-R0 (1 - s)), which the script finds with the
+# Brent root finder for 60 values of R0 and asserts against the ODE end state (to 1e-4) for the three runs.
+# Left: infected fraction in time; right: final attack rate against R0 with the three ODE results on top.
+# Output: images/sir_epidemic.png   (run: lmctl autorun <raw url of this file>)
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+let r1 = 1.5;
+let r2 = 2.5;
+let r3 = 4.0;
+let s1 = num.ode(3);
+s1.param("b", r1 * 0.2).param("g", 0.2);
+s1.rhs(0, "-b*y0*y1").rhs(1, "b*y0*y1 - g*y1").rhs(2, "g*y1");
+s1.init(0, 0.999).init(1, 0.001).init(2, 0.0).tol(0.000000001, 0.000000000001);
+let o1 = s1.solve(0.0, 300.0, 601);
+o1.save_csv("data/sir_r15.csv");
+let s2 = num.ode(3);
+s2.param("b", r2 * 0.2).param("g", 0.2);
+s2.rhs(0, "-b*y0*y1").rhs(1, "b*y0*y1 - g*y1").rhs(2, "g*y1");
+s2.init(0, 0.999).init(1, 0.001).init(2, 0.0).tol(0.000000001, 0.000000000001);
+let o2 = s2.solve(0.0, 300.0, 601);
+o2.save_csv("data/sir_r25.csv");
+let s3 = num.ode(3);
+s3.param("b", r3 * 0.2).param("g", 0.2);
+s3.rhs(0, "-b*y0*y1").rhs(1, "b*y0*y1 - g*y1").rhs(2, "g*y1");
+s3.init(0, 0.999).init(1, 0.001).init(2, 0.0).tol(0.000000001, 0.000000000001);
+let o3 = s3.solve(0.0, 300.0, 601);
+o3.save_csv("data/sir_r40.csv");
+let f1 = num.root("x - 0.999 * exp(-1.5 * (1 - x))", "x", 0.0001, 0.9989);
+let f2 = num.root("x - 0.999 * exp(-2.5 * (1 - x))", "x", 0.0001, 0.9989);
+let f3 = num.root("x - 0.999 * exp(-4.0 * (1 - x))", "x", 0.0001, 0.9989);
+num.assert_close(o1.get(600, 1), f1, 0.0001);
+num.assert_close(o2.get(600, 1), f2, 0.0001);
+num.assert_close(o3.get(600, 1), f3, 0.0001);
+num.print("1.5 " + str(1.0 - o1.get(600, 1)));
+num.print("2.5 " + str(1.0 - o2.get(600, 1)));
+num.print("4.0 " + str(1.0 - o3.get(600, 1)));
+for (k in range(0, 60)) {
+  let r0 = 1.05 + 0.08 * float(k);
+  let s = num.root("x - 0.999 * exp(-" + str(r0) + " * (1 - x))", "x", 0.0001, 0.9989);
+  num.print(str(r0) + " " + str(1.0 - s));
+}
+end _dsl_
+savedsl(sim, "data/sir_epidemic-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/sir_epidemic-sim.dslb;
+assert(r.code == 0);
+write_file("data/sir_final.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/sir_epidemic.png", 1100, 480);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
+plot.cmd("set title 'Infected fraction of the population'");
+plot.cmd("set xlabel 'days'; set ylabel 'infected'; set xrange [0:200]; set yrange [0:0.45]; set key top right box opaque");
+plot.cmd("plot 'data/sir_r15.csv' u 1:3 w l lw 3 lc rgb '#1f77b4' t 'R0 = 1.5', 'data/sir_r25.csv' u 1:3 w l lw 3 lc rgb '#ff7f0e' t 'R0 = 2.5', 'data/sir_r40.csv' u 1:3 w l lw 3 lc rgb '#d62728' t 'R0 = 4'");
+plot.cmd("set title 'Final attack rate: ODE (dots) and root finder (line)'");
+plot.cmd("set xlabel 'basic reproduction number R0'; set ylabel 'fraction ever infected'; set xrange [1:6]; set yrange [0:1]; set key bottom right box opaque");
+plot.cmd("plot 'data/sir_final.txt' every ::3::62 u 1:2 w l lw 3 lc rgb '#555555' t 'root finder', 'data/sir_final.txt' every ::0::2 u 1:2 w p pt 7 ps 2 lc rgb '#d62728' t 'CVODE runs'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "data/sir_epidemic-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/sir_epidemic-draw.dslb;
+assert(r.code == 0);
+println("wrote images/sir_epidemic.png");

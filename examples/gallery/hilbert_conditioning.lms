@@ -1,0 +1,44 @@
+# Ill-conditioning in one picture: solve H x = b for the n x n Hilbert matrix H(i,j) = 1/(i+j+1) with b = H * (1,...,1),
+# whose exact solution is all ones. The condition number (largest over smallest singular value, from svd_values) grows
+# like e^(3.5 n): known values 4.77e5 at n = 5 and 1.6e13 at n = 10, which the script asserts. The solution error follows
+# the rule of thumb error ~ cond * 1e-16 until, near n = 13, it is no better than no digit at all.
+# Output: images/hilbert_conditioning.png   (run: lmctl autorun <raw url of this file>)
+mkdir("images");
+mkdir("data");
+sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+for (n in range(2, 12)) {
+  let h = num.matrix(n, n);
+  let ones = num.matrix(n, 1);
+  for (i in range(0, n)) {
+    ones.set(i, 0, 1.0);
+    for (j in range(0, n)) { h.set(i, j, 1.0 / float(i + j + 1)); }
+  }
+  let b = h.mul(ones);
+  let x = h.solve(b);
+  let err = x.sub(ones).norm();
+  let sv = h.svd_values();
+  let cond = sv.get(0, 0) / sv.get(n - 1, 0);
+  if (n == 5) { num.assert_close(cond / 476607.0, 1.0, 0.01); }
+  if (n == 10) { num.assert_close(cond / 16024416688253.0, 1.0, 0.05); }
+  num.print(str(n) + " " + str(cond) + " " + str(err));
+}
+end _dsl_
+savedsl(sim, "data/hilbert_conditioning-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl data/hilbert_conditioning-sim.dslb;
+if (r.code != 0) { println(r.stdout); }
+assert(r.code == 0);
+write_file("data/hilbert.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/hilbert_conditioning.png", 900, 560);
+plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
+plot.cmd("set title 'Hilbert matrix: condition number and error of the computed solution'");
+plot.cmd("set xlabel 'matrix size n'; set ylabel 'log scale'; set logscale y; set format y '10^{%L}'");
+plot.cmd("set xrange [2:11]; set yrange [1e-16:1e19]; set key top left box opaque");
+plot.cmd("plot 'data/hilbert.txt' every ::0::9 u 1:2 w lp lw 3 pt 7 lc rgb '#d62728' t 'condition number', 'data/hilbert.txt' every ::0::9 u 1:($2*1.1e-16) w l lw 2 dt 2 lc rgb 'gray40' t 'cond x machine epsilon', 'data/hilbert.txt' every ::0::9 u 1:3 w lp lw 3 pt 7 lc rgb '#1f77b4' t 'error |x - 1|'");
+plot.close();
+end _dsl_
+savedsl(draw, "data/hilbert_conditioning-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl data/hilbert_conditioning-draw.dslb;
+assert(r.code == 0);
+println("wrote images/hilbert_conditioning.png");

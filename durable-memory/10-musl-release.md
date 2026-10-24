@@ -51,3 +51,7 @@ SHA256 in scripts/musl-test-tools.lock. Latest lmplot became glibc-dynamic durin
 which cannot start inside pure Alpine. These helpers are neither linked nor shipped with
 lmnum. No glibc compatibility package is installed. Runtime user gallery helpers remain
 independently versioned; numerical-only examples/ode_stiff.lms verifies lmnum autorun alone.
+
+Final local validation: all 19 checks and 25 gallery programs passed, followed by the
+read-only/network-disabled scratch matrix+CVODE smoke; mimalloc symbol proofs passed.
+Local stripped linux-x64 binary: 2,585,888 bytes (CI assets may vary by architecture/toolchain).

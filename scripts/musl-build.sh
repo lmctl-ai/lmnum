@@ -32,6 +32,8 @@ timeout 1800 docker run --rm --init \
     timeout 180 npm i -g @lmctl-ai/lmctl@0.2.369
     timeout 180 scripts/select-compiler.sh | tee compiler.txt
     grep -q lmscript compiler.txt
+    tool_dir="$(timeout 300 scripts/fetch-musl-test-tools.sh)"
+    export PATH="$tool_dir:$PATH"
     BUILD_DIR="$LMNUM_MUSL_BUILD_DIR" LMNUM_REQUIRE_MUSL=1 timeout 1500 ./test.sh
     grep -F "/usr/lib/libc.a" "$LMNUM_MUSL_BUILD_DIR/lmnum.map" | head -8 || true
     case "$LMNUM_USE_MIMALLOC" in

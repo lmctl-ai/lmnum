@@ -9,3 +9,4 @@ p1.txt
 
 compiler.txt
 .ci-bin/
+.ci-tools/

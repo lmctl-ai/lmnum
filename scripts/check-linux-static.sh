@@ -8,7 +8,7 @@ SMOKE=${2:-}
 [ -f "$HOST" ] || { echo "static check: missing host $HOST" >&2; exit 2; }
 [ -x "$HOST" ] || { echo "static check: host is not executable: $HOST" >&2; exit 2; }
 
-file_out="$(file -L "$HOST")"
+file_out="$(timeout 20 file -L "$HOST")"
 echo "$file_out"
 echo "$file_out" | grep -Eiq 'statically linked|static-pie linked' || {
   echo "static check: file did not report a static executable" >&2
@@ -16,11 +16,13 @@ echo "$file_out" | grep -Eiq 'statically linked|static-pie linked' || {
 }
 
 if command -v readelf >/dev/null 2>&1; then
-  readelf -l "$HOST" | grep -q 'INTERP' && {
+  program_headers="$(timeout 20 readelf -l "$HOST")"
+  dynamic_section="$(timeout 20 readelf -d "$HOST")"
+  printf '%s\n' "$program_headers" | grep -q 'INTERP' && {
     echo "static check: PT_INTERP is present" >&2
     exit 1
   } || :
-  readelf -d "$HOST" | grep -q 'NEEDED' && {
+  printf '%s\n' "$dynamic_section" | grep -q 'NEEDED' && {
     echo "static check: DT_NEEDED is present" >&2
     exit 1
   } || :
@@ -33,11 +35,15 @@ fi
 # either spelling, and reject only a concrete shared-object dependency.
 if command -v ldd >/dev/null 2>&1; then
   set +e
-  ldd_out="$(ldd "$HOST" 2>&1)"
+  ldd_out="$(timeout 20 ldd "$HOST" 2>&1)"
   ldd_status=$?
   set -e
   printf '%s\n' "$ldd_out"
-  if printf '%s\n' "$ldd_out" | grep -Eiq '=>[[:space:]]+(/|[A-Za-z]:\\).*\.so([.[:space:]]|$)|ld-linux|ld-musl'; then
+  # A static executable is reported differently by glibc and musl. The
+  # diagnostics "not a dynamic executable" and "not a valid dynamic program"
+  # are both expected. Reject only a concrete shared-object mapping; ELF
+  # metadata above remains authoritative for the loader and DT_NEEDED checks.
+  if printf '%s\n' "$ldd_out" | grep -Eiq '=>[[:space:]]+(/|[A-Za-z]:\\).*\.so([.[:space:]]|$)'; then
     echo "static check: ldd reported a shared-library dependency" >&2
     exit 1
   fi
@@ -46,7 +52,7 @@ else
   echo "static check: ldd unavailable; readelf checks are authoritative"
 fi
 
-version="$("$HOST" --version)"
+version="$(timeout 30 "$HOST" --version)"
 echo "$version"
 case "$version" in
   "lmnum "*) : ;;
@@ -57,7 +63,7 @@ if [ -n "$SMOKE" ]; then
   [ -f "$SMOKE" ] || { echo "static check: missing smoke bytecode $SMOKE" >&2; exit 2; }
   smoke_out="$(mktemp "${TMPDIR:-/tmp}/lmnum-static-smoke.XXXXXX")"
   trap 'rm -f "$smoke_out"' EXIT
-  "$HOST" --dsl "$SMOKE" >"$smoke_out"
+  timeout 120 "$HOST" --dsl "$SMOKE" >"$smoke_out"
   grep -q '"ok": true' "$smoke_out" || {
     echo "static check: smoke fixture did not report JSON ok" >&2
     cat "$smoke_out" >&2

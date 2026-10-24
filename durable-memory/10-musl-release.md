@@ -57,30 +57,8 @@ read-only/network-disabled scratch matrix+CVODE smoke; mimalloc symbol proofs pa
 Local stripped linux-x64 binary: 2,585,888 bytes (CI assets may vary by architecture/toolchain).
 
 Native ARM64 main CI 40058347391 passed all checks and scratch. Five paired samples:
-glibc median 14.6284s, musl+mimalloc 15.5115s (+6.0366%, below 20%).
+glibc median14.6284s, musl+mimalloc15.5115s (+6.0366%, below20%).
 
 Native x64 main CI 40058347391 passed all checks and scratch. Five paired samples:
-glibc median 14.7104s, musl+mimalloc 13.1061s (-10.9064%). Both native CI records are
+glibc median14.7104s, musl+mimalloc13.1061s (-10.9064%). Both native CI records are
 committed under benchmarks/; both remain below the20% regression threshold.
-
-Tagged release CI 40059374569 Linux builds passed all checks and scratch. Five-pair
-medians: x64 glibc 12.2545s vs musl+mimalloc 11.3805s (-7.1323%); ARM64 glibc 14.5231s
-vs musl+mimalloc 15.5008s (+6.7320%). Both tag JSON records are preserved in benchmarks/.
-
-Five-platform gates passed: main CI [40058347391](https://github.com/lmctl-ai/lmnum/actions/runs/40058347391)
-and tagged build CI [40059374569](https://github.com/lmctl-ai/lmnum/actions/runs/40059374569).
-The tag is v0.1.3 at 986ccdb; later changes only preserve documentation and proof.
-
-## Published release and final verification
-
-[v0.1.3](https://github.com/lmctl-ai/lmnum/releases/tag/v0.1.3) is public and its complete
-workflow 40059374569 (five platforms plus release) is green. All five downloaded binary
-checksums match SHA256SUMS. Linux x64 is 2,585,888B; arm64 is 2,429,976B. Both downloaded
-ELFs have no PT_INTERP or DT_NEEDED. The published x64 passes the network-disabled,
-read-only scratch matrix/CVODE fixture; --notices matches both repository and released
-THIRD_PARTY_NOTICES byte-for-byte, with musl/mimalloc notices and no old glibc paragraph.
-
-Empty-directory autorun of the public examples/ode_stiff.lms URL passed with a fresh
-LMSCRIPT_TOOL_CACHE and no lmnum on PATH. The installed binary reports `lmnum 0.1.3` and
-matches the downloaded release SHA256 b1be73a3f4a636df49d2ba5a81f9da951501dcfc8c95592e8ef4f1c48768ab3e.
-See autorun-v013.json for the recorded proof. No other host rollout was performed.

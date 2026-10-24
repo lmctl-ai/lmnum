@@ -1,8 +1,5 @@
 # Build, run, test
 
-Historical pre-musl measurements below; v0.1.3 Linux uses `scripts/musl-build.sh`
-and 19 checks / 25 gallery programs. See `10-musl-release.md` for current measurements.
-
 Measured 2026-10-23, x86_64 Linux, 4 cores, GCC, Ninja.
 
 - Clean Release build with SUNDIALS (CVODE, KINSOL) and Eigen: about 25 s. Binary 3.2 MB

@@ -61,7 +61,7 @@ jobs:
 
       - name: toolchain (linux)
         if: runner.os == 'Linux' && env.ONLY_OK == 'true'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+        run: docker version --format '{{.Server.Version}}'
 
       - name: toolchain (macos)
         if: runner.os == 'macOS' && env.ONLY_OK == 'true'
@@ -109,7 +109,12 @@ jobs:
         env:
           LMNUM_TEST_NETWORK: "1"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./test.sh
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            scripts/musl-build.sh
+          else
+            ./test.sh
+          fi
 
       - name: package artifact
         if: env.ONLY_OK == 'true'

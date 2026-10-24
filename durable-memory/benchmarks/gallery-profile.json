@@ -1,0 +1,165 @@
+{
+  "purpose": "profile of numerical simulation blocks only; rendering, lmscript compilation, and network installation excluded",
+  "host": {
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "machine": "x86_64",
+    "cpu_count": 4
+  },
+  "source_glob": "examples/gallery/*.lms",
+  "program_count": 25,
+  "ranked": [
+    {
+      "program": "monte_carlo",
+      "seconds": 13.23,
+      "max_rss_kb": 283756,
+      "log": "/tmp/lmnum-run-monte_carlo.log"
+    },
+    {
+      "program": "newton_fractal",
+      "seconds": 2.81,
+      "max_rss_kb": 3784,
+      "log": "/tmp/lmnum-run-newton_fractal.log"
+    },
+    {
+      "program": "wave_equation",
+      "seconds": 0.47,
+      "max_rss_kb": 10568,
+      "log": "/tmp/lmnum-run-wave_equation.log"
+    },
+    {
+      "program": "membrane_modes",
+      "seconds": 0.28,
+      "max_rss_kb": 10284,
+      "log": "/tmp/lmnum-run-membrane_modes.log"
+    },
+    {
+      "program": "svd_compression",
+      "seconds": 0.17,
+      "max_rss_kb": 213912,
+      "log": "/tmp/lmnum-run-svd_compression.log"
+    },
+    {
+      "program": "orbital",
+      "seconds": 0.11,
+      "max_rss_kb": 6216,
+      "log": "/tmp/lmnum-run-orbital.log"
+    },
+    {
+      "program": "burgers",
+      "seconds": 0.1,
+      "max_rss_kb": 10884,
+      "log": "/tmp/lmnum-run-burgers.log"
+    },
+    {
+      "program": "logistic_bifurcation",
+      "seconds": 0.1,
+      "max_rss_kb": 2564,
+      "log": "/tmp/lmnum-run-logistic_bifurcation.log"
+    },
+    {
+      "program": "van_der_pol",
+      "seconds": 0.06,
+      "max_rss_kb": 3400,
+      "log": "/tmp/lmnum-run-van_der_pol.log"
+    },
+    {
+      "program": "spectrum_dft",
+      "seconds": 0.04,
+      "max_rss_kb": 3144,
+      "log": "/tmp/lmnum-run-spectrum_dft.log"
+    },
+    {
+      "program": "lorenz_anim",
+      "seconds": 0.03,
+      "max_rss_kb": 2820,
+      "log": "/tmp/lmnum-run-lorenz_anim.log"
+    },
+    {
+      "program": "pca_ellipse",
+      "seconds": 0.03,
+      "max_rss_kb": 2924,
+      "log": "/tmp/lmnum-run-pca_ellipse.log"
+    },
+    {
+      "program": "pendulum",
+      "seconds": 0.03,
+      "max_rss_kb": 4716,
+      "log": "/tmp/lmnum-run-pendulum.log"
+    },
+    {
+      "program": "lorenz_attractor",
+      "seconds": 0.02,
+      "max_rss_kb": 2888,
+      "log": "/tmp/lmnum-run-lorenz_attractor.log"
+    },
+    {
+      "program": "markov_chain",
+      "seconds": 0.01,
+      "max_rss_kb": 2796,
+      "log": "/tmp/lmnum-run-markov_chain.log"
+    },
+    {
+      "program": "quadrature_orders",
+      "seconds": 0.01,
+      "max_rss_kb": 2796,
+      "log": "/tmp/lmnum-run-quadrature_orders.log"
+    },
+    {
+      "program": "predator_prey",
+      "seconds": 0.01,
+      "max_rss_kb": 2888,
+      "log": "/tmp/lmnum-run-predator_prey.log"
+    },
+    {
+      "program": "linear_regression",
+      "seconds": 0.0,
+      "max_rss_kb": 2820,
+      "log": "/tmp/lmnum-run-linear_regression.log"
+    },
+    {
+      "program": "nelder_mead",
+      "seconds": 0.0,
+      "max_rss_kb": 2760,
+      "log": "/tmp/lmnum-run-nelder_mead.log"
+    },
+    {
+      "program": "heat_diffusion",
+      "seconds": 0.0,
+      "max_rss_kb": 2948,
+      "log": "/tmp/lmnum-run-heat_diffusion.log"
+    },
+    {
+      "program": "vibration_modes",
+      "seconds": 0.0,
+      "max_rss_kb": 2760,
+      "log": "/tmp/lmnum-run-vibration_modes.log"
+    },
+    {
+      "program": "stiff_kinetics",
+      "seconds": 0.0,
+      "max_rss_kb": 5576,
+      "log": "/tmp/lmnum-run-stiff_kinetics.log"
+    },
+    {
+      "program": "hilbert_conditioning",
+      "seconds": 0.0,
+      "max_rss_kb": 2692,
+      "log": "/tmp/lmnum-run-hilbert_conditioning.log"
+    },
+    {
+      "program": "polyfit_overfit",
+      "seconds": 0.0,
+      "max_rss_kb": 2924,
+      "log": "/tmp/lmnum-run-polyfit_overfit.log"
+    },
+    {
+      "program": "sir_epidemic",
+      "seconds": 0.0,
+      "max_rss_kb": 2760,
+      "log": "/tmp/lmnum-run-sir_epidemic.log"
+    }
+  ],
+  "selected_heaviest": "monte_carlo",
+  "selection_reason": "monte_carlo has the largest measured numerical wall time and is the production libc comparison workload; it also exercises seeded allocation-heavy loops.",
+  "profile_method": "lmscript extracted each first sim _dsl_ block to bytecode, then timeout 30 /usr/bin/time ran build/lmnum --dsl fixture once."
+}

@@ -33,11 +33,12 @@ def main() -> int:
         last = next(i for i in range(first, len(lines)) if lines[i].strip() == "end _dsl_")
     except StopIteration:
         parser.error(f"no complete sim _dsl_ block in {source}")
-    block = "".join(lines[first : last + 1])
+    schema = Path(__file__).resolve().parents[1] / "schema" / "lmnum.dsl.json"
+    block = "sim = _dsl_ schema=" + json.dumps(str(schema)) + ";\n" + "".join(lines[first + 1 : last + 1])
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="lmnum-libc-prepare-") as work:
         wrapper = Path(work) / "simulation.lms"
-        wrapper.write_text(block + f'\nsavedsl(sim, "{output}");\n', encoding="utf-8")
+        wrapper.write_text(block + "\nsavedsl(sim, " + json.dumps(str(output)) + ");\n", encoding="utf-8")
         try:
             result = subprocess.run(
                 ["lmscript", str(wrapper)],
@@ -59,6 +60,7 @@ def main() -> int:
         "fixture": str(output),
         "fixture_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "block": {"first_line": first + 1, "last_line": last + 1},
+        "binding": "repository schema; no host lookup or install",
         "excluded": ["draw _dsl_ block", "outer lmscript commands", "lmplot", "network installation"],
     }
     manifest_path = output.with_suffix(output.suffix + ".manifest.json")

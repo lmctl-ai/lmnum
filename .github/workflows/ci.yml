@@ -61,7 +61,7 @@ jobs:
 
       - name: toolchain (linux)
         if: runner.os == 'Linux' && env.ONLY_OK == 'true'
-        run: docker version --format '{{.Server.Version}}'
+        run: timeout 30 docker version --format '{{.Server.Version}}'
 
       - name: toolchain (macos)
         if: runner.os == 'macOS' && env.ONLY_OK == 'true'
@@ -116,13 +116,44 @@ jobs:
             ./test.sh
           fi
 
+      - name: compare musl release performance with the glibc baseline
+        if: runner.os == 'Linux' && env.ONLY_OK == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          baseline_dir="$RUNNER_TEMP/lmnum-glibc-v012"
+          mkdir -p "$baseline_dir"
+          timeout 120 gh release download v0.1.2 -R "$GITHUB_REPOSITORY" -p "lmnum-${{ matrix.name }}" -p SHA256SUMS -D "$baseline_dir"
+          (cd "$baseline_dir" && grep "  lmnum-${{ matrix.name }}$" SHA256SUMS | sha256sum -c -)
+          chmod +x "$baseline_dir/lmnum-${{ matrix.name }}"
+          test "$(timeout 20 "$baseline_dir/lmnum-${{ matrix.name }}" --version)" = "lmnum 0.1.2"
+          timeout 120 python3 scripts/prepare-libc-benchmark.py --source examples/gallery/monte_carlo.lms --output build-musl/monte-carlo-benchmark.dslb
+          bench_cpu="$(python3 -c 'import os; print(max(os.sched_getaffinity(0)))')"
+          timeout 900 python3 scripts/benchmark-libc.py --glibc "$baseline_dir/lmnum-${{ matrix.name }}" --musl build-musl/lmnum --dsl build-musl/monte-carlo-benchmark.dslb --output build-musl/libc-benchmark.json --warmups 1 --repeats 5 --timeout 90 --cpu "$bench_cpu"
+
+      - name: preserve musl provenance and performance evidence
+        if: runner.os == 'Linux' && env.ONLY_OK == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: musl-proof-${{ matrix.name }}
+          path: |
+            build-musl/musl-provenance.txt
+            build-musl/lmnum.map
+            build-musl/mimalloc-symbols.txt
+            build-musl/counted-new-symbols.txt
+            build-musl/libc-benchmark.json
+            build-musl/monte-carlo-benchmark.dslb.manifest.json
+          if-no-files-found: error
+
       - name: package artifact
         if: env.ONLY_OK == 'true'
         shell: bash
         run: |
           mkdir -p dist
           ext=""; [ "$RUNNER_OS" = "Windows" ] && ext=".exe"
-          cp "build/lmnum$ext" "dist/lmnum-${{ matrix.name }}$ext"
+          binary_dir=build
+          [ "$RUNNER_OS" = Linux ] && binary_dir=build-musl
+          cp "$binary_dir/lmnum$ext" "dist/lmnum-${{ matrix.name }}$ext"
           cp LICENSE THIRD_PARTY_NOTICES dist/
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

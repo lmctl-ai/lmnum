@@ -5,6 +5,10 @@ cd "$HERE"
 BUILD_DIR="${BUILD_DIR:-build}"
 HOST="$BUILD_DIR/lmnum"
 UNAME_S="$(uname -s)"
+if [ -x /usr/bin/timeout ]; then TIMEOUT=/usr/bin/timeout
+elif [ -x /usr/bin/timeout.exe ]; then TIMEOUT=/usr/bin/timeout.exe
+elif command -v gtimeout >/dev/null 2>&1; then TIMEOUT="$(command -v gtimeout)"
+else TIMEOUT="$(command -v timeout)"; fi
 case "$UNAME_S" in MINGW*|MSYS*|CYGWIN*) HOST="$HOST.exe";; esac
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/lmnum-test-XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
@@ -18,34 +22,41 @@ sha(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -c1-64
 
 # lmscript resolves cli="lmnum" on PATH first, so programs bind to the binary under test.
 export PATH="$(cd "$BUILD_DIR" 2>/dev/null && pwd || echo "$HERE/$BUILD_DIR"):$PATH"
-LMSCRIPT="$(scripts/select-compiler.sh)"
-scripts/sync-sdk.sh --verify >/dev/null || fail "SDK header pin mismatch"
+LMSCRIPT="$("$TIMEOUT" 180 scripts/select-compiler.sh)"
+"$TIMEOUT" 30 scripts/sync-sdk.sh --verify >/dev/null || fail "SDK header pin mismatch"
 ok "SDK header matches sdk.lock"
-scripts/sync-deps.sh --verify >/dev/null || fail "third_party pin mismatch"
+"$TIMEOUT" 30 scripts/sync-deps.sh --verify >/dev/null || fail "third_party pin mismatch"
 ok "third_party matches deps.lock"
 
 GEN=""
 command -v ninja >/dev/null 2>&1 && GEN="-G Ninja"
 # shellcheck disable=SC2086
-cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >/dev/null
-cmake --build "$BUILD_DIR" >"$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log" >&2; fail "build"; }
+MUSL_POLICY=OFF
+[ "$UNAME_S" = Linux ] && MUSL_POLICY=ON
+MUSL_POLICY="${LMNUM_REQUIRE_MUSL:-$MUSL_POLICY}"
+"$TIMEOUT" 1200 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release -DLMNUM_REQUIRE_MUSL="$MUSL_POLICY" -DLMNUM_USE_MIMALLOC="${LMNUM_USE_MIMALLOC:-$MUSL_POLICY}" >/dev/null
+"$TIMEOUT" 1200 cmake --build "$BUILD_DIR" --parallel "${BUILD_JOBS:-2}" >"$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log" >&2; fail "build"; }
 ok "build"
 
 want_version="lmnum $(sed -n 's/^project(lmnum VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
-[ "$("$HOST" --version)" = "$want_version" ] || fail "--version is not exactly '$want_version'"
+[ "$("$TIMEOUT" 180 "$HOST" --version)" = "$want_version" ] || fail "--version is not exactly '$want_version'"
 ok "--version prints exactly '$want_version'"
-python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmnum.dsl.json 2>/dev/null || [ ! -e .git ] || fail "schema/lmnum.dsl.json is stale: run scripts/gen-schema.py"
+"$TIMEOUT" 30 python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmnum.dsl.json 2>/dev/null || [ ! -e .git ] || fail "schema/lmnum.dsl.json is stale: run scripts/gen-schema.py"
 ok "schema matches the registrations in cpp/main.cpp"
-"$HOST" --dsl-schema --json >"$WORK/schema.json" || fail "embedded schema print"
+"$TIMEOUT" 180 "$HOST" --dsl-schema --json >"$WORK/schema.json" || fail "embedded schema print"
 cmp -s "$WORK/schema.json" schema/lmnum.dsl.json || fail "embedded schema differs from schema/lmnum.dsl.json"
 ok "--dsl-schema --json prints byte-identical embedded schema bytes"
-diff -u <("$LMSCRIPT" --dsl-signatures schema/lmnum.dsl.json) <("$HOST" --dsl-signatures) || fail "host/compiler signatures differ"
+diff -u <("$TIMEOUT" 180 "$LMSCRIPT" --dsl-signatures schema/lmnum.dsl.json) <("$TIMEOUT" 180 "$HOST" --dsl-signatures) || fail "host/compiler signatures differ"
 ok "host registry matches compiler signatures"
-"$HOST" --notices | grep -q "SUNDIALS" || fail "--notices missing third-party text"
-ok "--notices prints the third-party license texts"
+"$TIMEOUT" 30 "$HOST" --notices >"$WORK/notices"
+cmp THIRD_PARTY_NOTICES "$WORK/notices" || fail "embedded notices differ"
+grep -q "SUNDIALS" "$WORK/notices" || fail "--notices missing third-party text"
+grep -q 'musl (Linux release builds, MIT)' "$WORK/notices" || fail "musl notice missing"
+if grep -q '^glibc (Linux builds)' "$WORK/notices"; then fail "stale glibc release notice"; fi
+ok "--notices matches complete musl and third-party texts"
 
 case "$UNAME_S" in
-  Linux) if ldd "$HOST" >/dev/null 2>&1; then fail "executable is dynamically linked"; fi; ok "executable is fully static (no dynamic loader)";;
+  Linux) "$TIMEOUT" 120 scripts/check-linux-static.sh "$HOST" || fail "Linux static linkage"; ok "executable is fully static (file, ELF and ldd)";;
   Darwin) bad="$(otool -L "$HOST" | tail -n +2 | grep -v -E '/usr/lib/(libSystem|libc\+\+|libresolv)' || true)"
           [ -z "$bad" ] || fail "non-system dylib dependencies: $bad"; ok "only system libraries linked";;
   MINGW*|MSYS*|CYGWIN*)
@@ -62,22 +73,27 @@ mkdir -p build/examples
 n=0
 for src in tests/*.lms examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
+  "$TIMEOUT" 180 "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
   n=$((n+1))
 done
 ok "$n programs compile as bytecode v5"
 for src in tests/*.lms examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$HOST" --dsl "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
+  "$TIMEOUT" 180 "$HOST" --dsl "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
   grep -q '"ok": true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
 done
 ok "$n programs run and pass their own assertions"
+
+if [ "$UNAME_S" = Linux ]; then
+  "$TIMEOUT" 360 scripts/check-linux-static.sh "$HOST" build/static-smoke.dslb || fail "scratch runtime smoke"
+  ok "Linux runtime smoke (scratch when Docker is available)"
+fi
 
 # Determinism: the CSV files the examples write are identical on rerun.
 for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/before.txt"
 for src in examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$HOST" --dsl "build/$name.dslb" >/dev/null 2>&1 || fail "$name rerun"
+  "$TIMEOUT" 180 "$HOST" --dsl "build/$name.dslb" >/dev/null 2>&1 || fail "$name rerun"
 done
 for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/after.txt"
 cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
@@ -93,8 +109,8 @@ $2
 end _dsl_
 savedsl(p, "$WORK/$1.dslb");
 LMS
-  "$LMSCRIPT" "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
-  set +e; out="$("$HOST" --dsl "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
+  "$TIMEOUT" 180 "$LMSCRIPT" "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
+  set +e; out="$("$TIMEOUT" 180 "$HOST" --dsl "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] || fail "$1: exit code $code, expected 3 ($out)"
   echo "$out" | grep -q "$3" || fail "$1: message lacks '$3': $out"
 }
@@ -146,15 +162,15 @@ while (i < 1000000) {
 end _dsl_
 savedsl(p, "$WORK/runaway.dslb");
 LMS
-"$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
-set +e; out="$(LMNUM_MAX_MEMORY_MB=64 "$HOST" --dsl "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+"$TIMEOUT" 180 "$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
+set +e; out="$(LMNUM_MAX_MEMORY_MB=64 "$TIMEOUT" 180 "$HOST" --dsl "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
 [ "$code" = 3 ] || fail "runaway loop under LMNUM_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
 echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
 grep -q "LMNUM_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
-set +e; LMNUM_MAX_MEMORY_MB=-5 "$HOST" --dsl "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+set +e; LMNUM_MAX_MEMORY_MB=-5 "$TIMEOUT" 180 "$HOST" --dsl "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
 [ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMNUM_MAX_MEMORY_MB: exit $code"
 if [ "$UNAME_S" = Linux ]; then
-  set +e; out="$(ulimit -v 6291456; "$HOST" --dsl "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$(ulimit -v 6291456; "$TIMEOUT" 180 "$HOST" --dsl "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
   ok "memory budget: runaway loop stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB)"
 else
@@ -190,7 +206,7 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMNUM_TEST_NETWORK:-}" = 1 ]; then
   for src in examples/gallery/*.lms; do
     name="$(basename "$src" .lms)"
     if [ "$name" = lorenz_anim ] && ! command -v ffmpeg >/dev/null 2>&1; then echo "note: $name skipped (no ffmpeg on PATH)"; continue; fi
-    timeout 300 "$LMSCRIPT" "$src" >"$WORK/gallery-$name.log" 2>&1 || { cat "$WORK/gallery-$name.log" >&2; fail "gallery example $name"; }
+    "$TIMEOUT" 300 "$LMSCRIPT" "$src" >"$WORK/gallery-$name.log" 2>&1 || { cat "$WORK/gallery-$name.log" >&2; fail "gallery example $name"; }
     ng=$((ng+1))
   done
   for img in images/*.png images/*.gif; do
@@ -209,17 +225,17 @@ num.identity(2).save_csv("$WORK/dry.csv");
 end _dsl_
 savedsl(p, "$WORK/dry.dslb");
 LMS
-"$LMSCRIPT" "$WORK/dry.lms" >/dev/null || fail "dry.lms compile"
-"$HOST" --dry-run --dsl "$WORK/dry.dslb" >/dev/null 2>"$WORK/dry.err" || fail "dry run"
+"$TIMEOUT" 180 "$LMSCRIPT" "$WORK/dry.lms" >/dev/null || fail "dry.lms compile"
+"$TIMEOUT" 180 "$HOST" --dry-run --dsl "$WORK/dry.dslb" >/dev/null 2>"$WORK/dry.err" || fail "dry run"
 [ ! -e "$WORK/dry.csv" ] || fail "--dry-run wrote a file"
 grep -q "would write" "$WORK/dry.err" || fail "--dry-run did not report the skipped write"
-"$HOST" --dsl "$WORK/dry.dslb" >/dev/null || fail "real run"
+"$TIMEOUT" 180 "$HOST" --dsl "$WORK/dry.dslb" >/dev/null || fail "real run"
 [ -s "$WORK/dry.csv" ] || fail "save_csv wrote nothing"
 ok "--dry-run reports save_csv without writing; a real run writes"
 
-set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
+set +e; "$TIMEOUT" 180 "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
-set +e; "$HOST" >/dev/null 2>&1; code=$?; set -e
+set +e; "$TIMEOUT" 30 "$HOST" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 2 ] || fail "usage exit code $code, expected 2"
 ok "usage and load errors use exit codes 2 and 3"
 

@@ -1,7 +1,7 @@
 # Purpose and place
 
 lmnum is the first target of the *scripted scientific libraries* family (see
-`../../simulation/ROADMAP.md`): well-known native libraries, statically linked into one executable,
+`../../simulation/ROADMAP.md`): well-known native libraries embedded into one executable,
 driven from lmscript `_dsl_` bytecode through an embedded schema. The idea is the same as lmplot,
 lmhtml, lmcad and lmssh: the script holds policy and control flow, the host holds the heavy code.
 

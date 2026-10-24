@@ -1,6 +1,8 @@
 # lmnum
 
-**Numerical computing for lmscript in one static executable: Eigen, SUNDIALS, integration, root finding, optimization and fitting.**
+The supported release is **v0.1.4**. Linux release binaries require glibc 2.35 or newer.
+
+**Numerical computing for lmscript in one executable: Eigen, SUNDIALS, integration, root finding, optimization and fitting.**
 
 [![CI](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmnum?label=release)](https://github.com/lmctl-ai/lmnum/releases)
@@ -72,12 +74,17 @@
 
 Each command runs the example from any empty directory: lmnum computes, [lmplot](https://github.com/lmctl-ai/lmplot) or [lmdraw](https://github.com/lmctl-ai/lmdraw) draws, and the picture lands in `images/`. `examples/render-all.sh` regenerates `docs/images/` from a checkout.
 
-**Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above.
+v0.1.4 supersedes the unsupported musl static-pie release v0.1.3.
+
+**Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above. Linux release
+binaries require glibc 2.35 or newer (the release baseline is Ubuntu 22.04); macOS and Windows use
+their platform runtimes.
 
 Eigen linear algebra, SUNDIALS ODE and nonlinear solvers, integration, root finding, optimization and
 fitting, with no Python and no BLAS. It is a scripting
 host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
-`_dsl_` block, compile it, run it with `lmnum --dsl`. One static executable, no shared libraries.
+`_dsl_` block, compile it, run it with `lmnum --dsl`. One executable with its third-party libraries
+embedded; Linux uses the system glibc runtime.
 
 ```
 # lotka-volterra.lms
@@ -163,7 +170,8 @@ cmake -S . -B build && cmake --build build
 ./test.sh                       # needs lmscript on PATH
 ```
 
-Linux builds are fully static; macOS links only system libraries; Windows links the MinGW runtime
+Linux release builds use dynamic glibc 2.35 or newer and statically link libstdc++, libgcc, and the
+mathematical libraries. macOS links its system libraries; Windows links the MinGW runtime
 statically. `lmnum --notices` prints the license texts of everything inside.
 
 ## Resource limits

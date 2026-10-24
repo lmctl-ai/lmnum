@@ -2,8 +2,30 @@ Third-party notices for lmnum
 =============================
 
 lmnum's own code (cpp/, schema/, scripts/, examples/; including the vendored `cpp/dslvm.hpp`
-runtime from the cpp-dsl-sdk project) is Copyright (c) 2026 Lattice Systems LLC, MIT license (see
-LICENSE). `lmnum --notices` prints this file.
+runtime from the cpp-dsl-sdk project) is Copyright (c) 2026 Lattice Systems LLC and is licensed
+under the MIT License. `lmnum --notices` prints this file, including the complete license text:
+
+MIT License
+
+Copyright (c) 2026 Lattice Systems LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 SUNDIALS (CVODE, KINSOL, serial vectors, dense matrices and solvers)
 --------------------------------------------------------------------
@@ -447,17 +469,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 GCC runtime libraries (Linux builds: libstdc++, libgcc)
 -------------------------------------------------------
-The fully static Linux binaries contain code from libstdc++ and libgcc, licensed under the GNU
+Linux binaries statically link libstdc++ and libgcc, licensed under the GNU
 General Public License v3.0 or later with the GCC Runtime Library Exception 3.1, which permits
 distributing binaries that statically incorporate the runtime without GPL obligations for the rest
 of the program. https://www.gnu.org/licenses/gcc-exception-3.1.html
 
 glibc (Linux builds)
 --------------------
-The fully static Linux binaries statically link glibc (LGPL v2.1 or later), which permits static
-linking provided the user can relink against a modified glibc: the complete lmnum source and build
-(https://github.com/lmctl-ai/lmnum, CMake) is public, so the program can be rebuilt and relinked
-with any glibc; glibc source at https://www.gnu.org/software/libc/.
+Linux release binaries are dynamically linked to the system glibc (LGPL-2.1), with a minimum
+runtime baseline of glibc 2.35 from Ubuntu 22.04. Dynamic linking satisfies the LGPL requirement
+without bundling glibc into the executable. glibc source: https://www.gnu.org/software/libc/.
 https://www.gnu.org/licenses/lgpl-2.1.html
 
 MinGW-w64 runtime (Windows builds)

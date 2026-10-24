@@ -13,7 +13,10 @@ Gauss-Kronrod live in `cpp/numeric.cpp`).
 
 SUNDIALS is built with `add_subdirectory` and options only: ARKODE, CVODES, IDA, IDAS off; MPI,
 OpenMP, LAPACK, KLU, pthreads off; 64-bit index; examples off. Library targets
-`sundials_*_static` are linked. Result: a 3.2 MB static Linux binary.
+`sundials_*_static` are linked, as are the other third-party libraries. Linux release binaries use
+dynamic system glibc 2.35 or newer and static libstdc++/libgcc; macOS and Windows retain their
+platform-specific runtime policy. Result: a single executable with no third-party shared-library
+dependencies.
 
 `THIRD_PARTY_NOTICES` is generated once from the upstream license files (BSD text, NOTICE, full
 MPL-2.0 text) and embedded in the binary (`lmnum --notices`). Bump a pin: edit `deps.lock`, run

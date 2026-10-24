@@ -13,12 +13,8 @@ Gauss-Kronrod live in `cpp/numeric.cpp`).
 
 SUNDIALS is built with `add_subdirectory` and options only: ARKODE, CVODES, IDA, IDAS off; MPI,
 OpenMP, LAPACK, KLU, pthreads off; 64-bit index; examples off. Library targets
-`sundials_*_static` are linked. Linux releases use Alpine musl, not glibc (see 10-musl-release.md).
+`sundials_*_static` are linked. Result: a 3.2 MB static Linux binary.
 
 `THIRD_PARTY_NOTICES` is generated once from the upstream license files (BSD text, NOTICE, full
 MPL-2.0 text) and embedded in the binary (`lmnum --notices`). Bump a pin: edit `deps.lock`, run
 `scripts/sync-deps.sh`, regenerate the notices if upstream license text changed.
-
-Linux v0.1.3 adds musl 1.2.5 (MIT; full upstream COPYRIGHT embedded) and mimalloc v3.6.0
-(MIT, b18ab4eef383f655e760881b02eff8af02800879). The isolated build copy suppresses C++
-operator aliases so memory_budget.cpp remains the sole counted new/delete implementation.

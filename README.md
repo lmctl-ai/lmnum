@@ -77,7 +77,7 @@ Each command runs the example from any empty directory: lmnum computes, [lmplot]
 Eigen linear algebra, SUNDIALS ODE and nonlinear solvers, integration, root finding, optimization and
 fitting, with no Python and no BLAS. It is a scripting
 host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
-`_dsl_` block, compile it, run it with `lmnum --dsl`. Linux releases are fully static; macOS uses system libraries.
+`_dsl_` block, compile it, run it with `lmnum --dsl`. One static executable, no shared libraries.
 
 ```
 # lotka-volterra.lms
@@ -155,25 +155,16 @@ integrates the Lorenz system with lmnum and draws it with [lmplot](https://githu
 
 ## Build
 
-Linux release builds require Docker; the pinned Alpine image supplies GCC, musl and the tools.
-Use a native x64 or arm64 machine:
+C++17 compiler, CMake 3.24, git; nothing else.
 
 ```sh
-timeout 300 scripts/sync-deps.sh
-timeout 1800 scripts/musl-build.sh  # builds build-musl/lmnum, runs the full suite and scratch smoke
+scripts/sync-deps.sh            # Eigen and SUNDIALS at the commits in deps.lock
+cmake -S . -B build && cmake --build build
+./test.sh                       # needs lmscript on PATH
 ```
 
-Linux releases statically link musl (MIT), libstdc++/libgcc (GCC runtime exception), and
-mimalloc (MIT). No glibc loader or shared libraries are required. macOS links system libraries;
-Windows links the MinGW runtime statically. `lmnum --notices` prints the embedded notices.
-For native macOS/Windows development, use `cmake -S . -B build`, `cmake --build build`,
-and `./test.sh` with lmscript on PATH. Linux glibc development builds must explicitly pass
-`-DLMNUM_REQUIRE_MUSL=OFF -DLMNUM_USE_MIMALLOC=OFF`; they are not release artifacts.
-
-On the heaviest gallery computation (Monte Carlo), seven paired, CPU-pinned samples measured
-plain musl 3.6% slower and musl+mimalloc 11.1% faster than the v0.1.2 glibc release.
-These compare complete release toolchains, not libc alone; see
-[the benchmark record](durable-memory/10-musl-release.md) for method and limitations.
+Linux builds are fully static; macOS links only system libraries; Windows links the MinGW runtime
+statically. `lmnum --notices` prints the license texts of everything inside.
 
 ## Resource limits
 

@@ -1,6 +1,6 @@
 # lmnum
 
-**Numerical computing for lmscript in one executable: Eigen, SUNDIALS, integration, root finding, optimization and fitting.**
+**Numerical computing for lmscript in one static executable: Eigen, SUNDIALS, integration, root finding, optimization and fitting.**
 
 [![CI](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmnum/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmnum?label=release)](https://github.com/lmctl-ai/lmnum/releases)

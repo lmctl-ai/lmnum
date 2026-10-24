@@ -142,8 +142,10 @@ GCC build. Local seven-pair measurements: plain musl +3.6338%, musl+mimalloc -11
 The initial GCC14 Alpine3.22 trial exceeded20% (+23.7%), so mimalloc was tested and retained
 for the better final result. These compare complete toolchains; they do not isolate libc.
 CI records five pairs independently on x64 and arm64 in musl-proof artifacts.
-Native main CI40058347391: x64 glibc14.7104s vs musl+mimalloc13.1061s (-10.9064%);
-arm64 glibc14.6284s vs musl+mimalloc15.5115s (+6.0366%). Both are below20% regression.
+Native main CI 40058347391: x64 glibc 14.7104s vs musl+mimalloc 13.1061s (-10.9064%);
+arm64 glibc 14.6284s vs musl+mimalloc 15.5115s (+6.0366%). Both are below 20% regression.
+Tagged release CI 40059374569 measured x64 -7.1323% (12.2545s vs 11.3805s) and
+arm64 +6.7320% (14.5231s vs 15.5008s). Run-to-run timing variation is expected.
 
 Reproduce on native x64 after the container build (use linux-arm64 on ARM):
 
@@ -188,3 +190,14 @@ Release gate: five native platform jobs green, tag matches --version, five binar
 plus licenses/checksums, downloaded ELF/scratch recheck, then lmctl autorun of a public
 numerical-only example in an empty directory with a fresh LMSCRIPT_TOOL_CACHE and no
 lmnum on PATH. Confirm the cached installation version/hash. No rollout is implied here.
+
+## Prototype completion evidence
+
+Released [lmnum v0.1.3](https://github.com/lmctl-ai/lmnum/releases/tag/v0.1.3).
+[Tag CI 40059374569](https://github.com/lmctl-ai/lmnum/actions/runs/40059374569) is green
+for all five platforms and publication. Downloaded binary checksums, both Linux ELF
+headers, x64 scratch execution, embedded notices and fresh-cache autorun were verified.
+Autorun URL: https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/ode_stiff.lms
+The installed x64 binary SHA256 is b1be73a3f4a636df49d2ba5a81f9da951501dcfc8c95592e8ef4f1c48768ab3e.
+Detailed benchmark JSON and install proof are committed in lmnum/durable-memory/.
+Stop point: this prototype does not authorize a musl rollout to other repositories.

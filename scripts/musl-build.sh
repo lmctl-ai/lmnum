@@ -4,7 +4,7 @@
 # are available to the following packaging step.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="${LMNUM_MUSL_IMAGE:-lmnum-musl:3.23-20261023}"
+IMAGE="${LMNUM_MUSL_IMAGE:-lmnum-musl:3.22-20261023}"
 
 command -v docker >/dev/null 2>&1 || {
   echo "error: Docker is required for the Linux musl build" >&2

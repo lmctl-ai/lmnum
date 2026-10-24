@@ -1,10 +1,10 @@
-# Alpine 3.23.7 multi-architecture base is pinned; APK revisions are recorded in provenance.
+# Alpine is pinned by digest so the Linux release toolchain is reproducible.
 FROM alpine@sha256:ff7f0c727dd796aa36787bfcd9a64bf35a6ce72a73451b3359fde849b6703d63
 
 RUN for attempt in 1 2 3 4 5; do \
       apk update && \
       apk add --no-cache \
-        bash binutils ca-certificates build-base cmake coreutils curl ffmpeg findutils \
+        bash binutils build-base cmake coreutils curl ffmpeg findutils \
         file git ninja nodejs npm python3 tar unzip zip && exit 0; \
       sleep 5; \
     done; \

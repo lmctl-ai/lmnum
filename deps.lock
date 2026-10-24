@@ -1,4 +1,3 @@
 # name repo commit  (scripts/sync-deps.sh fetches each into third_party/NAME)
 eigen https://gitlab.com/libeigen/eigen.git 3147391d946bb4b6c68edd901f2add6ac1f31f8c
 sundials https://github.com/LLNL/sundials.git 2dcb3e018b4c4cfe824bff09eb52184ed083e368
-mimalloc https://github.com/microsoft/mimalloc.git b18ab4eef383f655e760881b02eff8af02800879

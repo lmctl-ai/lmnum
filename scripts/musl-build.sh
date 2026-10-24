@@ -12,7 +12,6 @@ timeout 1800 docker run --rm --init \
   --env LMNUM_TEST_NETWORK="${LMNUM_TEST_NETWORK:-1}" \
   --env LMNUM_MUSL_BUILD_DIR="$MUSL_BUILD_DIR" \
   --env LMNUM_USE_MIMALLOC="${LMNUM_USE_MIMALLOC:-ON}" \
-  --env LMNUM_HOST_UID="$(id -u)" --env LMNUM_HOST_GID="$(id -g)" \
   --env GITHUB_TOKEN \
   "$IMAGE" -lc '
     set -euo pipefail
@@ -50,8 +49,6 @@ timeout 1800 docker run --rm --init \
         grep -q "operator new" "$LMNUM_MUSL_BUILD_DIR/counted-new-symbols.txt"
         ;;
     esac
-    # Host-side benchmark compilation must be able to create output files.
-    timeout 60 chown -R "$LMNUM_HOST_UID:$LMNUM_HOST_GID" "$LMNUM_MUSL_BUILD_DIR"
   '
 
 timeout 360 "$HERE/scripts/check-linux-static.sh" \

@@ -73,10 +73,6 @@ runs a host-side scratch container smoke. Runtime SDK compiler and host must agr
 ABI. Native macOS/Windows jobs stay unchanged. Package **build-musl/lmnum**, never a stale
 build/lmnum from a prior glibc build. Use separate directories for libc, compiler and CPU.
 
-Docker initially writes as root: pass the invoking UID/GID by environment and chown the
-build directory back before leaving the container, otherwise host-side benchmark savedsl
-fails EACCES. Do not make output world-writable.
-
 Container flags: --rm --init, explicit bind mount, GITHUB_TOKEN inherited by name (never
 printed or interpolated), outer timeout1800, test timeout1500. npm install timeout180,
 configure/build timeout1200. Add --pull=false to avoid implicit tag changes with a pinned

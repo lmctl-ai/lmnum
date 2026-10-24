@@ -170,9 +170,8 @@ For native macOS/Windows development, use `cmake -S . -B build`, `cmake --build 
 and `./test.sh` with lmscript on PATH. Linux glibc development builds must explicitly pass
 `-DLMNUM_REQUIRE_MUSL=OFF -DLMNUM_USE_MIMALLOC=OFF`; they are not release artifacts.
 
-On the heaviest gallery computation (Monte Carlo), seven local paired, CPU-pinned samples measured
+On the heaviest gallery computation (Monte Carlo), seven paired, CPU-pinned samples measured
 plain musl 3.6% slower and musl+mimalloc 11.1% faster than the v0.1.2 glibc release.
-Native CI measured musl+mimalloc 10.9% faster on x64 and 6.0% slower on arm64.
 These compare complete release toolchains, not libc alone; see
 [the benchmark record](durable-memory/10-musl-release.md) for method and limitations.
 

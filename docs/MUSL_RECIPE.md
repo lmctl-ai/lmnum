@@ -142,8 +142,6 @@ GCC build. Local seven-pair measurements: plain musl +3.6338%, musl+mimalloc -11
 The initial GCC14 Alpine3.22 trial exceeded20% (+23.7%), so mimalloc was tested and retained
 for the better final result. These compare complete toolchains; they do not isolate libc.
 CI records five pairs independently on x64 and arm64 in musl-proof artifacts.
-Native main CI40058347391: x64 glibc14.7104s vs musl+mimalloc13.1061s (-10.9064%);
-arm64 glibc14.6284s vs musl+mimalloc15.5115s (+6.0366%). Both are below20% regression.
 
 Reproduce on native x64 after the container build (use linux-arm64 on ARM):
 

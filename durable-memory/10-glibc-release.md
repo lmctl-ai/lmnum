@@ -31,3 +31,21 @@ uses those hashes. Main CI reference: https://github.com/lmctl-ai/lmnum/actions/
 The final installation check runs four README gallery URLs from separate empty
 working directories and caches, with no lmnum on PATH and GITHUB_TOKEN obtained
 from gh auth token, checks version and release hash, and validates each PNG.
+
+## Published and verified
+
+[v0.1.4](https://github.com/lmctl-ai/lmnum/releases/tag/v0.1.4) is public and latest, with
+exactly five binary assets. The [tag workflow](https://github.com/lmctl-ai/lmnum/actions/runs/40061802771)
+passed all five platform jobs and publication. v0.1.3's title and notes also explicitly
+mark it unsupported and link to v0.1.4; its historical tag and assets were preserved.
+
+All five downloaded assets match the SHA256 hashes in the release notes. Both downloaded
+Linux binaries pass the loader/NEEDED allowlist and <=2.35 symbol ceiling. Published x64
+is 2,120,888 bytes; ARM64 is 1,944,488 bytes. The x64 embedded notices match source exactly.
+The installed x64 SHA256 is 940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb.
+
+Four public README autoruns passed in independent empty directories and caches:
+predator_prey, van_der_pol, orbital and linear_regression. Every run used GITHUB_TOKEN
+from gh auth token, had no lmnum on PATH, installed version0.1.4 matching the published
+asset hash, passed its numerical assertions and wrote a valid images/<name>.png.
+See autorun-v014.json and release-v014.json for the proof. No open implementation items.

@@ -1,0 +1,53 @@
+{
+  "release": "v0.1.4",
+  "cases": [
+    {
+      "example": "predator_prey",
+      "url": "https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/predator_prey.lms",
+      "version": "lmnum 0.1.4",
+      "exit_code": 0,
+      "sha256": "940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb",
+      "empty_directory": true,
+      "fresh_cache": true,
+      "no_host_on_path": true,
+      "github_token_source": "gh auth token",
+      "image_bytes": 63428
+    },
+    {
+      "example": "van_der_pol",
+      "url": "https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/van_der_pol.lms",
+      "version": "lmnum 0.1.4",
+      "exit_code": 0,
+      "sha256": "940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb",
+      "empty_directory": true,
+      "fresh_cache": true,
+      "no_host_on_path": true,
+      "github_token_source": "gh auth token",
+      "image_bytes": 53090
+    },
+    {
+      "example": "orbital",
+      "url": "https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/orbital.lms",
+      "version": "lmnum 0.1.4",
+      "exit_code": 0,
+      "sha256": "940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb",
+      "empty_directory": true,
+      "fresh_cache": true,
+      "no_host_on_path": true,
+      "github_token_source": "gh auth token",
+      "image_bytes": 68736
+    },
+    {
+      "example": "linear_regression",
+      "url": "https://raw.githubusercontent.com/lmctl-ai/lmnum/main/examples/gallery/linear_regression.lms",
+      "version": "lmnum 0.1.4",
+      "exit_code": 0,
+      "sha256": "940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb",
+      "empty_directory": true,
+      "fresh_cache": true,
+      "no_host_on_path": true,
+      "github_token_source": "gh auth token",
+      "image_bytes": 57914
+    }
+  ]
+}

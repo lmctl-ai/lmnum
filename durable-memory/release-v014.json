@@ -1,0 +1,38 @@
+{
+  "release": "https://github.com/lmctl-ai/lmnum/releases/tag/v0.1.4",
+  "tag": "v0.1.4",
+  "main_ci": "https://github.com/lmctl-ai/lmnum/actions/runs/40060573250",
+  "tag_ci": "https://github.com/lmctl-ai/lmnum/actions/runs/40061802771",
+  "normal_revert_count": 17,
+  "assets": [
+    {
+      "name": "lmnum-linux-arm64",
+      "bytes": 1944488,
+      "sha256": "6fa4e633d21bea492b727df8994a9ac9b69fa979d5c6934beb3aca7380fe5d61"
+    },
+    {
+      "name": "lmnum-linux-x64",
+      "bytes": 2120888,
+      "sha256": "940dcd57c720bb5f422f811dd6076693b5e85a935fb0acb6af6a264f76505aeb"
+    },
+    {
+      "name": "lmnum-macos-arm64",
+      "bytes": 1118808,
+      "sha256": "4917cf7326b56389b83746d73da38cc7595783a05c3e7268856106cf792befb6"
+    },
+    {
+      "name": "lmnum-macos-x64",
+      "bytes": 1239088,
+      "sha256": "9c960dfe866b762b47a2955fdad285734956847db435c8da664475dc1c45cdce"
+    },
+    {
+      "name": "lmnum-windows-x64.exe",
+      "bytes": 2085888,
+      "sha256": "0f63d92304515fa00f21c4abfdf4f0fcc8ad5eef50a1a234cb6370a7dc87428c"
+    }
+  ],
+  "local_test_groups": 18,
+  "gallery_examples": 25,
+  "fresh_autoruns": 4,
+  "minimum_glibc": "2.35"
+}

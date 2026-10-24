@@ -10,7 +10,6 @@ own numerical assertions therefore remain part of the measurement gate.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -19,7 +18,6 @@ import shutil
 import subprocess
 import sys
 import time
-import tempfile
 from pathlib import Path
 
 
@@ -31,25 +29,17 @@ def command_output(command: list[str]) -> str:
     return (result.stdout + result.stderr).strip()
 
 
-def one_run(binary: Path, dsl: Path, timeout_s: float, cpu: str | None) -> tuple[float, int, str]:
+def one_run(binary: Path, dsl: Path, timeout_s: float) -> tuple[float, int, str]:
     started = time.perf_counter()
-    command = [str(binary), "--dsl", str(dsl)]
-    if cpu:
-        command = ["taskset", "--cpu-list", cpu, *command]
     try:
-        with tempfile.TemporaryDirectory(prefix="lmnum-libc-run-") as work:
-            workdir = Path(work)
-            (workdir / "data").mkdir()
-            (workdir / "images").mkdir()
-            result = subprocess.run(
-                command,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                cwd=work,
-                env=os.environ.copy(),
-            )
+        result = subprocess.run(
+            [str(binary), "--dsl", str(dsl)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            env=os.environ.copy(),
+        )
     except subprocess.TimeoutExpired as exc:
         elapsed = time.perf_counter() - started
         return elapsed, 124, f"timeout after {timeout_s:g}s: {exc}"
@@ -58,17 +48,17 @@ def one_run(binary: Path, dsl: Path, timeout_s: float, cpu: str | None) -> tuple
     return elapsed, result.returncode, output
 
 
-def measure(binary: Path, dsl: Path, warmups: int, repeats: int, timeout_s: float, cpu: str | None) -> dict[str, object]:
+def measure(binary: Path, dsl: Path, warmups: int, repeats: int, timeout_s: float) -> dict[str, object]:
     warmup_times: list[float] = []
     for _ in range(warmups):
-        elapsed, code, output = one_run(binary, dsl, timeout_s, cpu)
+        elapsed, code, output = one_run(binary, dsl, timeout_s)
         if code != 0:
             raise RuntimeError(f"{binary}: warmup failed with exit {code}: {output[-1000:]}")
         warmup_times.append(elapsed)
     measured: list[float] = []
     output = ""
     for _ in range(repeats):
-        elapsed, code, output = one_run(binary, dsl, timeout_s, cpu)
+        elapsed, code, output = one_run(binary, dsl, timeout_s)
         if code != 0:
             raise RuntimeError(f"{binary}: measured run failed with exit {code}: {output[-1000:]}")
         measured.append(elapsed)
@@ -85,7 +75,7 @@ def measure(binary: Path, dsl: Path, warmups: int, repeats: int, timeout_s: floa
 
 
 def measure_pair(
-    glibc: Path, musl: Path, dsl: Path, warmups: int, repeats: int, timeout_s: float, cpu: str | None
+    glibc: Path, musl: Path, dsl: Path, warmups: int, repeats: int, timeout_s: float
 ) -> tuple[dict[str, object], dict[str, object]]:
     """Run paired samples in alternating order to reduce frequency/thermal bias."""
     samples: dict[str, list[float]] = {"glibc": [], "musl": []}
@@ -95,7 +85,7 @@ def measure_pair(
     for index in range(warmups):
         order = ("glibc", "musl") if index % 2 == 0 else ("musl", "glibc")
         for name in order:
-            elapsed, code, output = one_run(binaries[name], dsl, timeout_s, cpu)
+            elapsed, code, output = one_run(binaries[name], dsl, timeout_s)
             if code != 0:
                 raise RuntimeError(f"{binaries[name]}: warmup failed with exit {code}: {output[-1000:]}")
             warmup_samples[name].append(elapsed)
@@ -103,7 +93,7 @@ def measure_pair(
     for index in range(repeats):
         order = ("glibc", "musl") if index % 2 == 0 else ("musl", "glibc")
         for name in order:
-            elapsed, code, output = one_run(binaries[name], dsl, timeout_s, cpu)
+            elapsed, code, output = one_run(binaries[name], dsl, timeout_s)
             if code != 0:
                 raise RuntimeError(f"{binaries[name]}: measured run failed with exit {code}: {output[-1000:]}")
             samples[name].append(elapsed)
@@ -132,15 +122,9 @@ def main() -> int:
     parser.add_argument("--warmups", type=int, default=2)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--timeout", type=float, default=120.0)
-    parser.add_argument("--cpu", help="optional Linux taskset CPU list, for example 2")
     args = parser.parse_args()
     if args.warmups < 0 or args.repeats < 3 or args.timeout <= 0:
         parser.error("warmups must be nonnegative, repeats must be at least 3, timeout must be positive")
-    args.glibc = args.glibc.resolve()
-    args.musl = args.musl.resolve()
-    args.dsl = args.dsl.resolve()
-    if args.cpu and (not sys.platform.startswith("linux") or not shutil.which("taskset")):
-        parser.error("--cpu requires Linux taskset")
     for path in (args.glibc, args.musl, args.dsl):
         if not path.is_file():
             parser.error(f"missing file: {path}")
@@ -152,10 +136,6 @@ def main() -> int:
             "platform": platform.platform(),
             "machine": platform.machine(),
             "python": sys.version,
-            "processor": platform.processor(),
-            "cpu_count": os.cpu_count(),
-            "load_average_start": os.getloadavg() if hasattr(os, "getloadavg") else None,
-            "taskset_cpu": args.cpu,
             "compiler": command_output(["cc", "--version"]) if shutil.which("cc") else "unavailable",
             "glibc_toolchain": command_output(["ldd", "--version"]) if shutil.which("ldd") else "unavailable",
             "musl_toolchain": command_output(["musl-gcc", "--version"]) if shutil.which("musl-gcc") else "container binary; musl-gcc unavailable on host",
@@ -168,15 +148,10 @@ def main() -> int:
             "virtual_memory_limit_bytes": resource.getrlimit(resource.RLIMIT_AS)[0],
             "per_run_timeout_seconds": args.timeout,
         },
-        "sha256": {
-            "glibc_binary": hashlib.sha256(args.glibc.read_bytes()).hexdigest(),
-            "musl_binary": hashlib.sha256(args.musl.read_bytes()).hexdigest(),
-            "dsl_bytecode": hashlib.sha256(args.dsl.read_bytes()).hexdigest(),
-        },
     }
     try:
         result["glibc"], result["musl"] = measure_pair(
-            args.glibc, args.musl, args.dsl, args.warmups, args.repeats, args.timeout, args.cpu
+            args.glibc, args.musl, args.dsl, args.warmups, args.repeats, args.timeout
         )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)

@@ -1,6 +1,10 @@
 # Linux musl migration (v0.1.3)
 
-Policy: simulation/PROCEDURE.md Rule 14. Both Linux architectures build natively in the
+Authority: Lead’s explicit musl prototype instruction. The shared PROCEDURE.md Rule 14
+changed concurrently to dynamic glibc; this prototype follows the explicit user request,
+not that later file edit. No rollout to other hosts is authorized here.
+
+Both Linux architectures build natively in the
 multiarchitecture Alpine 3.23.7 digest pinned in Dockerfile.musl. GCC 15.2, musl 1.2.5,
 Node 24, compiler @lmctl-ai/lmctl 0.2.369. APK revisions are recorded in musl-provenance.txt;
 APK repositories roll, so the pinned base is not a fully hermetic toolchain.
@@ -39,7 +43,8 @@ pthread worker pool is enabled in lmnum; this is not a threaded performance clai
 
 Run timeout 1800 scripts/musl-build.sh; use LMNUM_USE_MIMALLOC=OFF and
 LMNUM_MUSL_BUILD_DIR=build-musl-raw to compare raw musl. Never share CMake directories
-between libc/toolchains/architectures. Full details: ../simulation/MUSL_RECIPE.md.
+between libc/toolchains/architectures. Full details: [committed recipe](../docs/MUSL_RECIPE.md), mirrored at
+/home/mma/repos/dsl/simulation/MUSL_RECIPE.md.
 
 Gallery validation pins build-only lmplot v0.1.0 / lmdraw v0.2.4 static binaries by architecture and
 SHA256 in scripts/musl-test-tools.lock. Latest lmplot became glibc-dynamic during this work,

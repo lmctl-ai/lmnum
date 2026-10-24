@@ -41,7 +41,7 @@ Run timeout 1800 scripts/musl-build.sh; use LMNUM_USE_MIMALLOC=OFF and
 LMNUM_MUSL_BUILD_DIR=build-musl-raw to compare raw musl. Never share CMake directories
 between libc/toolchains/architectures. Full details: ../simulation/MUSL_RECIPE.md.
 
-Gallery validation pins build-only lmplot/lmdraw v0.1.0 static binaries by architecture and
+Gallery validation pins build-only lmplot v0.1.0 / lmdraw v0.2.4 static binaries by architecture and
 SHA256 in scripts/musl-test-tools.lock. Latest lmplot became glibc-dynamic during this work,
 which cannot start inside pure Alpine. These helpers are neither linked nor shipped with
 lmnum. No glibc compatibility package is installed. Runtime user gallery helpers remain

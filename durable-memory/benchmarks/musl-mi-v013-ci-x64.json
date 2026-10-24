@@ -1,0 +1,80 @@
+{
+  "program": "/home/runner/work/lmnum/lmnum/build-musl/monte-carlo-benchmark.dslb",
+  "purpose": "same-machine libc comparison of numerical lmnum execution only",
+  "excluded": [
+    "lmscript compilation",
+    "lmplot/lmdraw rendering",
+    "network installation"
+  ],
+  "host": {
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "processor": "x86_64",
+    "cpu_count": 4,
+    "load_average_start": [
+      1.18505859375,
+      0.55517578125,
+      0.20703125
+    ],
+    "taskset_cpu": "3",
+    "host_compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "host_ldd": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\nWritten by Roland McGrath and Ulrich Drepper.",
+    "host_musl_gcc": "container binary; musl-gcc unavailable on host",
+    "file_glibc": "/home/runner/work/_temp/lmnum-glibc-v012/lmnum-linux-x64: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, BuildID[sha1]=73784406cc6a914dfb9914f7de388e6c48b838bf, for GNU/Linux 3.2.0, stripped",
+    "file_musl": "/home/runner/work/lmnum/lmnum/build-musl/lmnum: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), static-pie linked, BuildID[sha1]=5342d107f010714287f3e21fa96da3c05dbcadc5, stripped"
+  },
+  "settings": {
+    "warmups": 1,
+    "repeats": 5,
+    "timeout_seconds": 90.0
+  },
+  "limits": {
+    "LMNUM_MAX_MEMORY_MB": "4096 (default)",
+    "virtual_memory_limit_bytes": -1,
+    "per_run_timeout_seconds": 90.0
+  },
+  "sha256": {
+    "glibc_binary": "65c155bd4601d766e2a8566e3acff8b38339dddb056bb06f4cbddde6e1e843bc",
+    "musl_binary": "b1be73a3f4a636df49d2ba5a81f9da951501dcfc8c95592e8ef4f1c48768ab3e",
+    "dsl_bytecode": "a44da6435d4b48202e39ed87208f2ceaf5f753ae2faefb525548778e4d7d692d"
+  },
+  "glibc": {
+    "binary": "/home/runner/work/_temp/lmnum-glibc-v012/lmnum-linux-x64",
+    "version": "lmnum 0.1.2",
+    "warmup_seconds": [
+      14.796736981000095
+    ],
+    "seconds": [
+      14.710426513000016,
+      14.621420564000005,
+      14.758581456000002,
+      14.923884765000025,
+      14.672220928000002
+    ],
+    "median_seconds": 14.710426513000016,
+    "assertions_and_output_tail": "N = 100: rms error 2-D 0.186237798384676 (expected 0.164218336773632), 6-D 1.36858623053285 (expected 1.74364091069838)\nN = 1000: rms error 2-D 0.0134059969672926 (expected 0.0519303977769265), 6-D 0.280859809622486 (expected 0.551387669925712)\nN = 10000: rms error 2-D 0.0122278261853099 (expected 0.0164218336773632), 6-D 0.126360409758718 (expected 0.174364091069838)\nN = 100000: rms error 2-D 0.00360041105542178 (expected 0.00519303977769265), 6-D 0.0935693390088996 (expected 0.0551387669925712)\nN = 1000000: rms error 2-D 0.00163899352852297 (expected 0.00164218336773632), 6-D 0.0291932321831745 (expected 0.0174364091069838)\nfitted error slope in 6-D: -0.381933600524476\n{\"ok\": true, \"result\": null}"
+  },
+  "musl": {
+    "binary": "/home/runner/work/lmnum/lmnum/build-musl/lmnum",
+    "version": "lmnum 0.1.3",
+    "warmup_seconds": [
+      13.25539160599999
+    ],
+    "seconds": [
+      13.15349929599995,
+      13.193429140000035,
+      13.106051127,
+      13.035005995000006,
+      13.007851330999983
+    ],
+    "median_seconds": 13.106051127,
+    "assertions_and_output_tail": "N = 100: rms error 2-D 0.186237798384676 (expected 0.164218336773632), 6-D 1.36858623053285 (expected 1.74364091069838)\nN = 1000: rms error 2-D 0.0134059969672926 (expected 0.0519303977769265), 6-D 0.280859809622486 (expected 0.551387669925712)\nN = 10000: rms error 2-D 0.0122278261853099 (expected 0.0164218336773632), 6-D 0.126360409758718 (expected 0.174364091069838)\nN = 100000: rms error 2-D 0.00360041105542178 (expected 0.00519303977769265), 6-D 0.0935693390088996 (expected 0.0551387669925712)\nN = 1000000: rms error 2-D 0.00163899352852297 (expected 0.00164218336773632), 6-D 0.0291932321831745 (expected 0.0174364091069838)\nfitted error slope in 6-D: -0.381933600524476\n{\"ok\": true, \"result\": null}"
+  },
+  "musl_vs_glibc": {
+    "ratio": 0.8909361747885295,
+    "regression_percent": -10.906382521147052,
+    "mimalloc_threshold_percent": 20.0,
+    "mimalloc_needed": false
+  }
+}

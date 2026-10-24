@@ -55,3 +55,10 @@ independently versioned; numerical-only examples/ode_stiff.lms verifies lmnum au
 Final local validation: all 19 checks and 25 gallery programs passed, followed by the
 read-only/network-disabled scratch matrix+CVODE smoke; mimalloc symbol proofs passed.
 Local stripped linux-x64 binary: 2,585,888 bytes (CI assets may vary by architecture/toolchain).
+
+Native ARM64 main CI 40058347391 passed all checks and scratch. Five paired samples:
+glibc median14.6284s, musl+mimalloc15.5115s (+6.0366%, below20%).
+
+Native x64 main CI 40058347391 passed all checks and scratch. Five paired samples:
+glibc median14.7104s, musl+mimalloc13.1061s (-10.9064%). Both native CI records are
+committed under benchmarks/; both remain below the20% regression threshold.

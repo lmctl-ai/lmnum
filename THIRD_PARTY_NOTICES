@@ -2,7 +2,7 @@ Third-party notices for lmnum
 =============================
 
 lmnum's own code (cpp/, schema/, scripts/, examples/; including the vendored `cpp/dslvm.hpp`
-runtime from the cpp-dsl-sdk project) is Copyright (c) 2026 Lattice Systems LLC and is licensed
+runtime from the lmcode-cpp project) is Copyright (c) 2026 Lattice Systems LLC and is licensed
 under the MIT License. `lmnum --notices` prints this file, including the complete license text:
 
 MIT License

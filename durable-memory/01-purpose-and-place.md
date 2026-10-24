@@ -12,7 +12,7 @@ lmhtml, lmcad and lmssh: the script holds policy and control flow, the host hold
 - **Libraries**: Eigen (dense linear algebra), SUNDIALS 7 (CVODE for ODEs, KINSOL for nonlinear
   systems; serial N_Vector, dense matrix and solver). Both are pinned in `deps.lock` and fetched
   into git-ignored `third_party/` by `scripts/sync-deps.sh`; nothing of them is committed.
-- **cpp-dsl-sdk** (`cpp/dslvm.hpp`, bytecode v5) is vendored and pinned by `sdk.lock`.
+- **lmcode-cpp** (`cpp/dslvm.hpp`, bytecode v5) is vendored and pinned by `sdk.lock`.
 - **lmscript** binds programs to the binary with `_dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";`
   so `lmscript prog.lms` is all a user runs; the schema is read from the binary
   (`lmnum --dsl-schema --json`).

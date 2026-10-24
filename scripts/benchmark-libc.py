@@ -74,45 +74,6 @@ def measure(binary: Path, dsl: Path, warmups: int, repeats: int, timeout_s: floa
     }
 
 
-def measure_pair(
-    glibc: Path, musl: Path, dsl: Path, warmups: int, repeats: int, timeout_s: float
-) -> tuple[dict[str, object], dict[str, object]]:
-    """Run paired samples in alternating order to reduce frequency/thermal bias."""
-    samples: dict[str, list[float]] = {"glibc": [], "musl": []}
-    warmup_samples: dict[str, list[float]] = {"glibc": [], "musl": []}
-    tails: dict[str, str] = {"glibc": "", "musl": ""}
-    binaries = {"glibc": glibc, "musl": musl}
-    for index in range(warmups):
-        order = ("glibc", "musl") if index % 2 == 0 else ("musl", "glibc")
-        for name in order:
-            elapsed, code, output = one_run(binaries[name], dsl, timeout_s)
-            if code != 0:
-                raise RuntimeError(f"{binaries[name]}: warmup failed with exit {code}: {output[-1000:]}")
-            warmup_samples[name].append(elapsed)
-            tails[name] = output[-1000:]
-    for index in range(repeats):
-        order = ("glibc", "musl") if index % 2 == 0 else ("musl", "glibc")
-        for name in order:
-            elapsed, code, output = one_run(binaries[name], dsl, timeout_s)
-            if code != 0:
-                raise RuntimeError(f"{binaries[name]}: measured run failed with exit {code}: {output[-1000:]}")
-            samples[name].append(elapsed)
-            tails[name] = output[-1000:]
-
-    def pack(name: str) -> dict[str, object]:
-        ordered = sorted(samples[name])
-        return {
-            "binary": str(binaries[name]),
-            "version": command_output([str(binaries[name]), "--version"]),
-            "warmup_seconds": warmup_samples[name],
-            "seconds": samples[name],
-            "median_seconds": ordered[len(ordered) // 2],
-            "assertions_and_output_tail": tails[name],
-        }
-
-    return pack("glibc"), pack("musl")
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--glibc", type=Path, required=True, help="glibc-linked baseline binary")
@@ -150,9 +111,8 @@ def main() -> int:
         },
     }
     try:
-        result["glibc"], result["musl"] = measure_pair(
-            args.glibc, args.musl, args.dsl, args.warmups, args.repeats, args.timeout
-        )
+        result["glibc"] = measure(args.glibc, args.dsl, args.warmups, args.repeats, args.timeout)
+        result["musl"] = measure(args.musl, args.dsl, args.warmups, args.repeats, args.timeout)
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 1

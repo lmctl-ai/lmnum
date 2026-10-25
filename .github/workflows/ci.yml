@@ -97,7 +97,7 @@ jobs:
           if [ -x /usr/bin/timeout ]; then deadline=/usr/bin/timeout
           elif command -v gtimeout >/dev/null 2>&1; then deadline=gtimeout
           else deadline=timeout; fi
-          "$deadline" 180 npm i -g @lmctl-ai/lmctl@0.2.419
+          "$deadline" 180 npm i -g @lmctl-ai/lmctl@0.2.420
           "$deadline" 180 scripts/select-compiler.sh | tee compiler.txt
           grep -q lmscript compiler.txt || { echo "no v5 compiler available"; exit 1; }
 

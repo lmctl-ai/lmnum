@@ -5,7 +5,7 @@
 mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/ode_lotka_volterra.dslb";
 mkdir("build/examples");
-p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let sys = num.ode(2);
 sys.param("a", 1.1).param("b", 0.4).param("c", 0.4).param("d", 0.1);
 sys.rhs(0, "a*y0 - b*y0*y1");      # prey
@@ -25,7 +25,7 @@ for (i in range(0, sol.rows())) {
 }
 num.print("largest drift of the invariant: " + str(worst));
 num.assert_close(worst, 0.0, 0.000001);
-end _dsl_
+end _lmcode_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 assert(r.code == 0);

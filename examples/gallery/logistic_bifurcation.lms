@@ -5,7 +5,7 @@
 # Output: images/logistic_bifurcation.png   (run: lmctl autorun <raw url of this file>)
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let lyap = num.func("log(abs(r * (1 - 2 * x)))", "r,x");
 let orbit = num.func("r * x * (1 - x)", "r,x");
 for (k in range(0, 601)) {
@@ -34,13 +34,13 @@ let acc = 0.0;
 for (i in range(0, 3000)) { z = orbit.eval2(3.9, z); }
 for (i in range(0, 20000)) { z = orbit.eval2(3.9, z); acc = acc + lyap.eval2(3.9, z); }
 num.assert_close(acc / 20000.0, 0.49, 0.03);
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/logistic_bifurcation-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/logistic_bifurcation-sim.dslb;
 assert(r.code == 0);
 write_file("data/logistic.txt", r.stdout);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/logistic_bifurcation.png", 1000, 820);
 plot.cmd("set multiplot layout 2,1");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
@@ -52,7 +52,7 @@ plot.cmd("set xlabel 'r'; set ylabel 'Lyapunov exponent'; set yrange [-2:0.8]");
 plot.cmd("plot 'data/logistic.txt' u 2:3 w l lw 2 lc rgb '#d62728', 0 w l lc rgb 'black' dt 2");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/logistic_bifurcation-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/logistic_bifurcation-draw.dslb;
 assert(r.code == 0);

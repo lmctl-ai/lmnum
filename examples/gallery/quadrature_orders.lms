@@ -5,7 +5,7 @@
 # and only lmnum's adaptive Gauss-Kronrod `integrate` (dashed line) reaches 1e-7. Each slope is asserted. lmplot draws images/quadrature_orders.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let lg2 = num.func("log(x)/log(2)", "x");
 fn smooth(x: float) -> float { return pow(2.718281828459045, x); }
 fn singular(x: float) -> float { return 1.0 / sqrt(x); }
@@ -56,13 +56,13 @@ num.print("Gauss-Kronrod errors: " + str(gk_smooth) + " and " + str(gk_sing));
 num.assert_close(gk_smooth, 0.0, 0.000000001);
 num.assert_close(gk_sing, 0.0, 0.0000001);
 num.matrix(1, 2).set(0, 0, max(gk_smooth, 0.0000000000000001)).set(0, 1, max(gk_sing, 0.0000000000000001)).save_csv("data/quad_gk.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/quadrature_orders-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/quadrature_orders-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/quadrature_orders.png", 1000, 480);
 plot.cmd("stats 'data/quad_gk.csv' u 1:2 nooutput; gks = STATS_min_x; gkz = STATS_min_y");
 plot.cmd("set multiplot layout 1,2 title 'Quadrature error against the number of panels (lmnum, loops in lmscript)' font ',13'");
@@ -74,7 +74,7 @@ plot.cmd("set title 'singular: 1/sqrt(x) on [0,1] = 2' font ',11'; set yrange [1
 plot.cmd("plot 'data/quad_singular.csv' u 1:2 w lp pt 7 lw 2 lc rgb '#1f77b4' t 'midpoint', '' u 1:3 w lp pt 5 lw 2 lc rgb '#2ca02c' t 'trapezoid', '' u 1:4 w lp pt 9 lw 2 lc rgb '#d62728' t 'Simpson', 1/sqrt(x) w l dt 3 lc rgb '#555555' t 'n^{-1/2}', gkz w l dt 2 lw 2 lc rgb '#9467bd' t 'adaptive Gauss-Kronrod'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/quadrature_orders-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/quadrature_orders-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

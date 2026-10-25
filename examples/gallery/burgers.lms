@@ -6,7 +6,7 @@
 # benchmark's -152 (to 5%). lmplot draws images/burgers.png: snapshots and the steepening slope.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let pi = 3.141592653589793;
 let m = 399;
 let h = 2.0 / 400.0;
@@ -59,13 +59,13 @@ for (j in range(0, 39)) {
 }
 num.print("max |numerical - characteristics| at t = 0.1: " + str(worst));
 num.assert_close(worst, 0.0, 0.005);
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/burgers-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/burgers-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/burgers.png", 1000, 480);
 plot.cmd("set multiplot layout 1,2 title 'Burgers equation u_t + u u_x = nu u_xx (lmnum CVODE BDF): a shock forms at x = 0' font ',13' noenhanced");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set xlabel 'x'; set ylabel 'u'; set xrange [-1:1]; set yrange [-1.1:1.1]");
@@ -77,7 +77,7 @@ plot.cmd("set label 2 'Basdevant: -152.0' at 0.3, -160 font ',9' tc rgb '#d62728
 plot.cmd("plot -152.00516 w l dt 2 lc rgb '#d62728' notitle, 'data/burgers_slope.csv' u 1:2 w l lw 2.5 lc rgb '#08519c' t 'du/dx (0, t)'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/burgers-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/burgers-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

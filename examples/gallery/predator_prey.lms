@@ -3,7 +3,7 @@
 # lmnum integrates with CVODE and writes CSVs; lmplot draws docs/images/predator_prey.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 for (k in range(0, 5)) {
   let sys = num.ode(2);
   sys.param("a", 1.1).param("b", 0.4).param("c", 0.4).param("d", 0.1);
@@ -25,12 +25,12 @@ for (k in range(0, 5)) {
   }
 }
 num.parse("4.0 2.75").save_csv("data/lv_fixed.csv");   # the fixed point (c/d, a/b)
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/predator_prey-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/predator_prey-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/predator_prey.png", 1000, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
@@ -41,7 +41,7 @@ plot.cmd("set xrange [0:30]; set yrange [0:22]");
 plot.cmd("plot for [k=0:4] sprintf('data/lv_%d.csv', k) u 2:3 w l lw 2 lc palette frac k/4.0, 'data/lv_fixed.csv' u 1:2 w p pt 7 ps 1.8 lc rgb 'black'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/predator_prey-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/predator_prey-draw.dslb;
 assert(r.code == 0);

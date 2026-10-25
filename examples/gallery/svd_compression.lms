@@ -6,7 +6,7 @@
 # Needs lmnum 0.1.2 (svd_u / svd_v).
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let n = 96;
 let img = num.matrix(n, n);
 for (i in range(0, n)) {
@@ -55,13 +55,13 @@ img.save_csv("data/svd_full.csv");
 rebuild(u, s, v, 1).save_csv("data/svd_k1.csv");
 rebuild(u, s, v, 4).save_csv("data/svd_k4.csv");
 rebuild(u, s, v, 16).save_csv("data/svd_k16.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/svd_compression-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/svd_compression-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/svd_compression.png", 1000, 640);
 plot.cmd("set multiplot title 'SVD image compression (lmnum): rank-k reconstructions of a 96 x 96 picture' font ',13'");
 plot.cmd("set size 0.25, 0.5; set origin 0, 0.44");
@@ -78,7 +78,7 @@ plot.cmd("set y2label 'relative error'; set logscale y2; set y2range [1e-3:1]; s
 plot.cmd("plot 'data/svd_energy.csv' u 1:2 w lp pt 7 ps 0.6 lc rgb '#1f77b4' t 'energy', '' u 1:3 axes x1y2 w lp pt 5 ps 0.6 lc rgb '#d62728' t 'error'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/svd_compression-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/svd_compression-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

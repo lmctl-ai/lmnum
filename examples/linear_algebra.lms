@@ -2,7 +2,7 @@
 # Every result is checked with num.assert_close, so the program fails loudly if a number is off.
 mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/linear_algebra.dslb";
-p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 # A small symmetric system A x = b with a known solution x = (1, 2, 3).
 let a = num.parse("4 1 0; 1 3 1; 0 1 2");
 let x_true = num.parse("1; 2; 3");
@@ -39,7 +39,7 @@ let c = design.lstsq(y);
 num.print("coefficients:\n" + c.to_text());
 num.assert_close(c.get(0, 0), 1.0, 0.000000001);
 num.assert_close(c.get(1, 0), 2.0, 0.000000001);
-end _dsl_
+end _lmcode_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 assert(r.code == 0);

@@ -3,7 +3,7 @@
 # Mass is conserved (y0 + y1 + y2 = 1), which the program checks.
 mkdir("build");
 out = ARGV.len() > 0 ? ARGV[0] : "build/ode_stiff.dslb";
-p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let sys = num.ode(3).stiff();
 sys.rhs(0, "-0.04*y0 + 10000*y1*y2");
 sys.rhs(1, "0.04*y0 - 10000*y1*y2 - 30000000*y1*y1");
@@ -15,7 +15,7 @@ let last = sol.row(40);
 num.print("y(40) = " + last.to_text());
 num.assert_close(last.get(0, 1) + last.get(0, 2) + last.get(0, 3), 1.0, 0.0000001);
 num.assert_close(last.get(0, 1), 0.7158, 0.001);   # reference value from the literature
-end _dsl_
+end _lmcode_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 assert(r.code == 0);

@@ -2,7 +2,7 @@
 # lmnum (CVODE) integrates six starting points; lmplot draws docs/images/van_der_pol.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 for (k in range(0, 6)) {
   let sys = num.ode(2);
   sys.param("mu", 1.5);
@@ -22,19 +22,19 @@ for (k in range(0, 6)) {
   # a start inside the cycle grows to the cycle amplitude max|x| = 2.02 (mu = 1.5)
   if (k == 0) { num.assert_close(sol.col(1).max(), 2.0, 0.05); }
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/van_der_pol-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/van_der_pol-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/van_der_pol.png", 900, 650);
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset colorbox");
 plot.cmd("set title 'Van der Pol oscillator, mu = 1.5: trajectories converge to the limit cycle'");
 plot.cmd("set xlabel 'x'; set ylabel 'dx/dt'; set xrange [-4:4]; set yrange [-6:9]; set key off");
 plot.cmd("plot for [k=0:5] sprintf('data/vdp_%d.csv', k) u 2:3 w l lw 1.8 lc palette frac k/5.0, for [k=0:5] sprintf('data/vdp_%d.csv', k) every ::0::0 u 2:3 w p pt 7 ps 1.6 lc rgb 'black'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/van_der_pol-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/van_der_pol-draw.dslb;
 assert(r.code == 0);

@@ -5,7 +5,7 @@
 # the 12.25 Hz tone, which falls between the 0.5 Hz bins, leaks into its neighbours and loses height. lmplot draws images/spectrum_dft.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let n = 200;
 let fs = 100.0;
 let pi = 3.141592653589793;
@@ -64,13 +64,13 @@ num.assert_close(spec.get(best2, 0), 12.25, 0.25);  # the off-bin tone shows in 
 num.assert_close(spec.get(best1, 1), 1.0, 0.05);    # noise of 0.1 rms spreads over 100 bins
 num.assert_close(spec.get(best3, 1), 0.25, 0.05);
 num.assert_close(spec.get(best2, 1), 0.5, 0.2);     # leakage lowers an off-bin tone by up to 36%
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/spectrum_dft-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/spectrum_dft-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/spectrum_dft.png", 900, 620);
 plot.cmd("set multiplot layout 2,1 title 'Discrete Fourier transform as a matrix product (lmnum): three tones in noise' font ',13'");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset key");
@@ -81,7 +81,7 @@ plot.cmd("set label 1 '5 Hz, 1.0' at 6, 1.02 font ',9'; set label 2 '12.25 Hz, 0
 plot.cmd("plot 'data/dft_spectrum.csv' u 1:2 w impulses lw 2 lc rgb '#d62728', '' u 1:2 w p pt 7 ps 0.5 lc rgb '#d62728'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/spectrum_dft-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/spectrum_dft-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

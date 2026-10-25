@@ -3,7 +3,7 @@
 # lmnum computes, lmplot draws docs/images/pca_ellipse.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let n = 500;
 let z = num.normal(n, 2, 3);
 # stretch and rotate: x = z A with A = [[2.2, 1.2], [0.0, 0.7]], so the true covariance is A^T A
@@ -49,19 +49,19 @@ for (i in range(0, 121)) {
   }
 }
 ell.save_csv("data/pca_ellipse.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/pca_ellipse-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/pca_ellipse-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/pca_ellipse.png", 900, 650);
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set size ratio -1");
 plot.cmd("set title 'PCA of 500 samples: principal axes and 1-sigma, 2-sigma ellipses'");
 plot.cmd("set xlabel 'x'; set ylabel 'y'; set key top left box opaque");
 plot.cmd("plot 'data/pca_points.csv' u 1:2 w p pt 7 ps 0.5 lc rgb '#9ecae1' t 'samples', 'data/pca_ellipse.csv' u 2:3 w l lw 2 lc rgb '#08519c' t '1 sigma', '' u 4:5 w l lw 2 dt 2 lc rgb '#08519c' t '2 sigma', 'data/pca_axes.csv' u 1:2:3:4 every ::0::0 w vectors lw 3.5 lc rgb '#d62728' t 'PC1', '' u 1:2:3:4 every ::1::1 w vectors lw 3.5 lc rgb '#2ca02c' t 'PC2'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/pca_ellipse-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/pca_ellipse-draw.dslb;
 assert(r.code == 0);

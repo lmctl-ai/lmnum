@@ -88,14 +88,14 @@ embedded; Linux uses the system glibc runtime.
 
 ```
 # lotka-volterra.lms
-p = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let sys = num.ode(2);
 sys.param("a", 1.1).param("b", 0.4).param("c", 0.4).param("d", 0.1);
 sys.rhs(0, "a*y0 - b*y0*y1").rhs(1, "d*y0*y1 - c*y1");
 sys.init(0, 10.0).init(1, 10.0);
 let sol = sys.solve(0.0, 60.0, 601);          # rows: t, prey, predators
 sol.save_csv("lv.csv");
-end _dsl_
+end _lmcode_
 savedsl(p, "lv.dslb");
 system ${dsl_cli(p)} --dsl lv.dslb;
 ```

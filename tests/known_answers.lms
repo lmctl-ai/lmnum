@@ -3,7 +3,7 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/known_answers.dslb";
 mkdir("build/examples");
 write_file("build/examples/header.csv", "t,prey\n1,2\n3,4\n");
-p = _dsl_ cli="lmnum";
+p = _lmcode_ cli="lmnum";
 let pi = num.eval("pi");
 # quadrature: smooth, endpoint singularities (integrable), rational
 num.assert_close(num.integrate("sin(x)", "x", 0.0, pi), 2.0, 0.000000001);
@@ -114,5 +114,5 @@ num.assert_close(num.integrate_tol("sin(x)", "x", 0.0, pi, 0.001), 2.0, 0.001);
 let hdr = num.load_csv("build/examples/header.csv");
 num.assert_close(float(hdr.rows() * 10 + hdr.cols()), 22.0, 0.0);
 num.assert_close(hdr.get(1, 1), 4.0, 0.0);
-end _dsl_
+end _lmcode_
 savedsl(p, out);

@@ -6,7 +6,7 @@
 mkdir("images");
 mkdir("data");
 mkdir("build/rendered");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let p = num.parse("0.7 0.2 0.1; 0.3 0.4 0.3; 0.2 0.3 0.5");
 # stationary distribution: rows of (P^T - I), the last replaced by the normalisation
 let a = p.transpose().sub(num.identity(3));
@@ -34,7 +34,7 @@ num.assert_close(abs(table.get(4, 1) - pi.get(0, 0)) + abs(table.get(4, 6) - pi.
 num.assert_close(p.sub(num.identity(3).scale(0.3 + sqrt(0.03))).det(), 0.0, 0.000000000001);
 num.assert_close(p.sub(num.identity(3).scale(0.3 - sqrt(0.03))).det(), 0.0, 0.000000000001);
 pi.transpose().save_csv("data/markov_pi.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/markov_chain-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/markov_chain-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
@@ -85,7 +85,7 @@ ys = 450.0 - bh(pi[0]) + 0.0001;
 yc = 450.0 - bh(pi[1]) + 0.0001;
 yr = 450.0 - bh(pi[2]) + 0.0001;
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 520, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "A Markov chain forgets where it started", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "Daily weather transitions; lmnum solves for the stationary distribution and raises P to powers for the forecast", "#9fb3c8");
@@ -150,7 +150,7 @@ scene.text(729.0, 470.0, 12.0, "8", "#9fb3c8").set_attr("text-anchor", "middle")
 scene.text(797.0, 470.0, 12.0, "16", "#9fb3c8").set_attr("text-anchor", "middle");
 scene.text(500.0, 498.0, 12.0, ${ret}, "#9fb3c8");
 scene.render_png("build/rendered/markov_chain.png", 900, 520, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "data/markov_chain-draw.dslb");
 r = system ${dsl_cli(d)} --dsl data/markov_chain-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

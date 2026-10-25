@@ -3,7 +3,7 @@
 # lmnum computes, lmplot draws docs/images/stiff_kinetics.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let y0 = 1.0;
 let y1 = 0.0;
 let y2 = 0.0;
@@ -36,12 +36,12 @@ all.save_csv("data/robertson.csv");
 # mass is conserved: y0 + y1 + y2 = 1 at the end of the twelve decades (the table is uniform within each decade)
 num.assert_close(y0 + y1 + y2, 1.0, 0.000001);
 num.print("final state at t=" + str(t) + ": " + str(y0) + " " + str(y1) + " " + str(y2));
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/stiff_kinetics-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/stiff_kinetics-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/stiff_kinetics.png", 900, 560);
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
 plot.cmd("set title 'Robertson kinetics: A -> B -> C over twelve decades of time (stiff, BDF)'");
@@ -49,7 +49,7 @@ plot.cmd("set logscale x; set format x '10^{%L}'; set xtics 1e-6,100; set xlabel
 plot.cmd("set xrange [1e-7:1e5]; set yrange [0:1.05]");
 plot.cmd("plot 'data/robertson.csv' u 1:2 w l lw 3 lc rgb '#1f77b4' t 'A (y0)', '' u 1:($3*10000.0) w l lw 3 lc rgb '#d62728' t 'B x 10^4', '' u 1:4 w l lw 3 lc rgb '#2ca02c' t 'C (y2)'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/stiff_kinetics-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/stiff_kinetics-draw.dslb;
 assert(r.code == 0);

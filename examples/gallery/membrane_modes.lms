@@ -5,7 +5,7 @@
 # shapes are compared to sin(m pi x) sin(n pi y). lmplot draws images/membrane_modes.png.
 mkdir("images");
 mkdir("data");
-sim = _dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let pi = 3.141592653589793;
 let g = 24;
 let h = 1.0 / float(g + 1);
@@ -59,13 +59,13 @@ for (i in range(0, g)) { for (j in range(0, g)) { ref.set(i * g + j, 0, sin(2.0 
 let proj = abs(v22.transpose().mul(ref).get(0, 0)) / (v22.norm() * ref.norm());
 num.print("cosine between the computed (2,2) mode and sin(2 pi x) sin(2 pi y): " + str(proj));
 num.assert_close(proj, 1.0, 0.000000001);
-end _dsl_
+end _lmcode_
 savedsl(sim, "data/membrane_modes-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl data/membrane_modes-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/membrane_modes.png", 1000, 640);
 plot.cmd("set multiplot title 'Vibration modes of a square drum (lmnum eig_sym on the 576 x 576 discrete Laplacian)' font ',13' noenhanced");
 plot.cmd("set size 0.25, 0.5; set origin 0, 0.44");
@@ -80,7 +80,7 @@ plot.cmd("set title 'the twelve lowest eigenvalues / pi^2: the grid values sit j
 plot.cmd("plot 'data/membrane_spectrum.csv' u 1:3 w p pt 6 ps 1.8 lw 2 lc rgb '#555555' t 'm^2 + n^2 (continuous)', '' u 1:2 w p pt 7 ps 1 lc rgb '#d62728' t 'eig_sym (24 x 24 grid)'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "data/membrane_modes-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl data/membrane_modes-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

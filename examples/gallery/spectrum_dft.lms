@@ -66,7 +66,7 @@ num.assert_close(spec.get(best3, 1), 0.25, 0.05);
 num.assert_close(spec.get(best2, 1), 0.5, 0.2);     # leakage lowers an off-bin tone by up to 36%
 end _lmcode_
 savedsl(sim, "data/spectrum_dft-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/spectrum_dft-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/spectrum_dft-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -83,7 +83,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/spectrum_dft-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/spectrum_dft-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/spectrum_dft-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/spectrum_dft.png");

@@ -28,7 +28,7 @@ for (j in range(0, n)) { num.assert_close(sign * vec.get(j, 0), scale * sin(floa
 vec.col(0).hstack(vec.col(1)).hstack(vec.col(2)).hstack(vec.col(3)).save_csv("data/modes.csv");
 end _lmcode_
 savedsl(sim, "data/vibration_modes-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/vibration_modes-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/vibration_modes-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 write_file("data/modes_spectrum.txt", r.stdout);
@@ -47,6 +47,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/vibration_modes-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/vibration_modes-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/vibration_modes-draw.dslb;
 assert(r.code == 0);
 println("wrote images/vibration_modes.png");

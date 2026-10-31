@@ -61,7 +61,7 @@ num.print("cosine between the computed (2,2) mode and sin(2 pi x) sin(2 pi y): "
 num.assert_close(proj, 1.0, 0.000000001);
 end _lmcode_
 savedsl(sim, "data/membrane_modes-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/membrane_modes-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/membrane_modes-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -82,7 +82,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/membrane_modes-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/membrane_modes-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/membrane_modes-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/membrane_modes.png");

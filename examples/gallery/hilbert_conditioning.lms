@@ -24,7 +24,7 @@ for (n in range(2, 12)) {
 }
 end _lmcode_
 savedsl(sim, "data/hilbert_conditioning-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/hilbert_conditioning-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/hilbert_conditioning-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 write_file("data/hilbert.txt", r.stdout);
@@ -39,6 +39,6 @@ plot.cmd("plot 'data/hilbert.txt' every ::0::9 u 1:2 w lp lw 3 pt 7 lc rgb '#d62
 plot.close();
 end _lmcode_
 savedsl(draw, "data/hilbert_conditioning-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/hilbert_conditioning-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/hilbert_conditioning-draw.dslb;
 assert(r.code == 0);
 println("wrote images/hilbert_conditioning.png");

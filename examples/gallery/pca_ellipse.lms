@@ -51,7 +51,7 @@ for (i in range(0, 121)) {
 ell.save_csv("data/pca_ellipse.csv");
 end _lmcode_
 savedsl(sim, "data/pca_ellipse-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/pca_ellipse-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/pca_ellipse-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -63,6 +63,6 @@ plot.cmd("plot 'data/pca_points.csv' u 1:2 w p pt 7 ps 0.5 lc rgb '#9ecae1' t 's
 plot.close();
 end _lmcode_
 savedsl(draw, "data/pca_ellipse-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/pca_ellipse-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/pca_ellipse-draw.dslb;
 assert(r.code == 0);
 println("wrote images/pca_ellipse.png");

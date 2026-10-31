@@ -53,7 +53,7 @@ num.assert_close(float(hits) / float(n * n), 1.0, 0.02);
 num.assert_close(floor(img.get(n / 2, n - 1)), 1.0, 0.0);
 end _lmcode_
 savedsl(sim, "data/newton_fractal-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/newton_fractal-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/newton_fractal-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -68,6 +68,6 @@ plot.cmd("plot 'data/newton.csv' matrix u (-1.6 + 3.2*$1/399.0):(-1.6 + 3.2*$2/3
 plot.close();
 end _lmcode_
 savedsl(draw, "data/newton_fractal-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/newton_fractal-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/newton_fractal-draw.dslb;
 assert(r.code == 0);
 println("wrote images/newton_fractal.png");

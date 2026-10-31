@@ -61,7 +61,7 @@ num.print("max |numerical - characteristics| at t = 0.1: " + str(worst));
 num.assert_close(worst, 0.0, 0.005);
 end _lmcode_
 savedsl(sim, "data/burgers-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/burgers-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/burgers-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -79,7 +79,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/burgers-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/burgers-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/burgers-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/burgers.png");

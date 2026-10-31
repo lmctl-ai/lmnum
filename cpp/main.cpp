@@ -1,5 +1,5 @@
 // lmnum: Eigen + SUNDIALS (CVODE, KINSOL) behind an lmscript `_dsl_` schema. Scripting only:
-// the executable has no user-facing commands besides --dsl and the schema/version queries.
+// the executable has no user-facing commands besides --lmcode and the schema/version queries.
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
@@ -450,7 +450,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   });
 }
 
-const char *usage = "usage: lmnum --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n"
+const char *usage = "usage: lmnum --version | --notices | --lmcode-schema [--json] | --lmcode-signatures | [--dry-run] --lmcode FILE [FILE ...]\n"
                     "environment: LMNUM_MAX_MEMORY_MB  total memory budget in MiB (default 4096); a program that needs more\n"
                     "             stops with a run error (exit 3) instead of allocating\n";
 }  // namespace
@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
     std::cout.write(reinterpret_cast<const char *>(lmnum::embedded_notices), (std::streamsize)lmnum::embedded_notices_size);
     return std::cout ? 0 : 4;
   }
-  if (argc >= 2 && a1 == "--dsl-schema") {
+  if (argc >= 2 && a1 == "--lmcode-schema") {
     if (argc == 2) { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return std::cout ? 0 : 4; }
     if (argc == 3 && std::string(argv[2]) == "--json") {
       std::cout.write(reinterpret_cast<const char *>(lmnum::embedded_schema), (std::streamsize)lmnum::embedded_schema_size);
@@ -477,10 +477,10 @@ int main(int argc, char **argv) {
     }
     std::cerr << usage; return 2;
   }
-  if (argc == 2 && a1 == "--dsl-signatures") { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return 0; }
+  if (argc == 2 && a1 == "--lmcode-signatures") { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return 0; }
   int first = 2;
   if (argc >= 2 && a1 == "--dry-run") { first = 3; host.dry_run = true; }  // the only side effect is save_csv
-  if (argc <= first || std::string(argv[first - 1]) != "--dsl") { std::cerr << usage; return 2; }
+  if (argc <= first || std::string(argv[first - 1]) != "--lmcode") { std::cerr << usage; return 2; }
   for (int i = first; i < argc; i++)
     if (std::string(argv[i]).empty() || std::string(argv[i]).rfind("--", 0) == 0) { std::cerr << usage; return 2; }
   if (!membudget::configure("lmnum", "LMNUM_MAX_MEMORY_MB")) { std::cerr << usage; return 2; }

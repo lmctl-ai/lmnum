@@ -24,7 +24,7 @@ for (k in range(0, 6)) {
 }
 end _lmcode_
 savedsl(sim, "data/van_der_pol-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/van_der_pol-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/van_der_pol-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -36,6 +36,6 @@ plot.cmd("plot for [k=0:5] sprintf('data/vdp_%d.csv', k) u 2:3 w l lw 1.8 lc pal
 plot.close();
 end _lmcode_
 savedsl(draw, "data/van_der_pol-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/van_der_pol-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/van_der_pol-draw.dslb;
 assert(r.code == 0);
 println("wrote images/van_der_pol.png");

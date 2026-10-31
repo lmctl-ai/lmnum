@@ -15,7 +15,7 @@ let sol = sys.solve(0.0, 40.0, 4001);
 sol.save_csv("data/lorenz.csv");
 end _lmcode_
 savedsl(sim, "data/lorenz-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/lorenz-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/lorenz-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -29,6 +29,6 @@ plot.cmd("plot 'data/lorenz.csv' using 2:4:1 with lines lc palette lw 1.5");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/lorenz-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/lorenz-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/lorenz-draw.dslb;
 assert(r.code == 0);
 println("wrote images/lorenz_attractor.png");

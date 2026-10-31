@@ -27,6 +27,6 @@ num.print("largest drift of the invariant: " + str(worst));
 num.assert_close(worst, 0.0, 0.000001);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 println(f"wrote {out}");

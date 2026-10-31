@@ -68,7 +68,7 @@ for (k in range(0, 4)) {
 kepler.save_csv("data/orbit_kepler.csv");
 end _lmcode_
 savedsl(sim, "data/orbital-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/orbital-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/orbital-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -89,7 +89,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/orbital-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/orbital-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/orbital-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/orbital.png");

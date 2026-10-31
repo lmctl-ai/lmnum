@@ -57,7 +57,7 @@ rebuild(u, s, v, 4).save_csv("data/svd_k4.csv");
 rebuild(u, s, v, 16).save_csv("data/svd_k16.csv");
 end _lmcode_
 savedsl(sim, "data/svd_compression-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/svd_compression-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/svd_compression-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -80,7 +80,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/svd_compression-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/svd_compression-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/svd_compression-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/svd_compression.png");

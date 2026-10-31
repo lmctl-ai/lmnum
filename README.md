@@ -83,7 +83,7 @@ their platform runtimes.
 Eigen linear algebra, SUNDIALS ODE and nonlinear solvers, integration, root finding, optimization and
 fitting, with no Python and no BLAS. It is a scripting
 host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
-`_dsl_` block, compile it, run it with `lmnum --dsl`. One executable with its third-party libraries
+`_dsl_` block, compile it, run it with `lmnum --lmcode`. One executable with its third-party libraries
 embedded; Linux uses the system glibc runtime.
 
 ```
@@ -97,7 +97,7 @@ let sol = sys.solve(0.0, 60.0, 601);          # rows: t, prey, predators
 sol.save_csv("lv.csv");
 end _lmcode_
 savedsl(p, "lv.dslb");
-system ${dsl_cli(p)} --dsl lv.dslb;
+system ${dsl_cli(p)} --lmcode lv.dslb;
 ```
 
 `lmscript lotka-volterra.lms` finds `lmnum` on `PATH` or downloads the release binary for your

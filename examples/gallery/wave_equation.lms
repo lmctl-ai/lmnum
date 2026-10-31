@@ -78,7 +78,7 @@ for (i in range(0, m + 2)) {
 snaps.save_csv("data/wave_snaps.csv");
 end _lmcode_
 savedsl(sim, "data/wave_equation-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/wave_equation-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/wave_equation-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -97,7 +97,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/wave_equation-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/wave_equation-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/wave_equation-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/wave_equation.png");

@@ -51,7 +51,7 @@ out.save_csv("data/heat_exact.csv");
 num_tab.save_csv("data/heat_numeric.csv");
 end _lmcode_
 savedsl(sim, "data/heat_diffusion-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/heat_diffusion-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/heat_diffusion-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -64,6 +64,6 @@ plot.cmd("plot for [k=0:5] 'data/heat_exact.csv' u 1:(column(k+2)) w l lw 2.5 lc
 plot.close();
 end _lmcode_
 savedsl(draw, "data/heat_diffusion-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/heat_diffusion-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/heat_diffusion-draw.dslb;
 assert(r.code == 0);
 println("wrote images/heat_diffusion.png");

@@ -75,7 +75,7 @@ for (k in range(0, 5)) {
 mid.save_csv("data/mc_midpoint.csv");
 end _lmcode_
 savedsl(sim, "data/monte_carlo-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/monte_carlo-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/monte_carlo-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -88,7 +88,7 @@ plot.cmd("plot 'data/mc_errors.csv' u 1:4 w l dt 2 lw 1.5 lc rgb '#1f77b4' t 'bi
 plot.close();
 end _lmcode_
 savedsl(draw, "data/monte_carlo-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/monte_carlo-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/monte_carlo-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/monte_carlo.png");

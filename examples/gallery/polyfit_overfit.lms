@@ -38,7 +38,7 @@ for (d in range(0, 3)) {
 curves.save_csv("data/fit_curves.csv");
 end _lmcode_
 savedsl(sim, "data/polyfit_overfit-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/polyfit_overfit-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/polyfit_overfit-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -50,6 +50,6 @@ plot.cmd("plot 'data/fit_curves.csv' u 1:2 w l lw 2 dt 2 lc rgb 'black' t 'true 
 plot.close();
 end _lmcode_
 savedsl(draw, "data/polyfit_overfit-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/polyfit_overfit-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/polyfit_overfit-draw.dslb;
 assert(r.code == 0);
 println("wrote images/polyfit_overfit.png");

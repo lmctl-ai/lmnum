@@ -5,8 +5,8 @@ lmnum is the first target of the *scripted scientific libraries* family (see
 driven from lmscript `_dsl_` bytecode through an embedded schema. The idea is the same as lmplot,
 lmhtml, lmcad and lmssh: the script holds policy and control flow, the host holds the heavy code.
 
-- **Scripting only.** There is no user-facing command line beyond `--dsl`, `--dry-run`,
-  `--version`, `--notices`, `--dsl-schema [--json]` and `--dsl-signatures` (the conventions
+- **Scripting only.** There is no user-facing command line beyond `--lmcode`, `--dry-run`,
+  `--version`, `--notices`, `--lmcode-schema [--json]` and `--lmcode-signatures` (the conventions
   of the sibling hosts). Unlike lmplot (which also exposes gnuplot's own CLI) a numerical library
   has no CLI worth preserving.
 - **Libraries**: Eigen (dense linear algebra), SUNDIALS 7 (CVODE for ODEs, KINSOL for nonlinear
@@ -15,7 +15,7 @@ lmhtml, lmcad and lmssh: the script holds policy and control flow, the host hold
 - **lmcode-cpp** (`cpp/dslvm.hpp`, bytecode v5) is vendored and pinned by `sdk.lock`.
 - **lmscript** binds programs to the binary with `_dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";`
   so `lmscript prog.lms` is all a user runs; the schema is read from the binary
-  (`lmnum --dsl-schema --json`).
+  (`lmnum --lmcode-schema --json`).
 
 ## Scope boundary
 

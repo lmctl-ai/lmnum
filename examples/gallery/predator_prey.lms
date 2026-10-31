@@ -27,7 +27,7 @@ for (k in range(0, 5)) {
 num.parse("4.0 2.75").save_csv("data/lv_fixed.csv");   # the fixed point (c/d, a/b)
 end _lmcode_
 savedsl(sim, "data/predator_prey-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/predator_prey-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/predator_prey-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -43,6 +43,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/predator_prey-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/predator_prey-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/predator_prey-draw.dslb;
 assert(r.code == 0);
 println("wrote images/predator_prey.png");

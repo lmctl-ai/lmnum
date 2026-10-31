@@ -60,7 +60,7 @@ num.assert_close(float(inside) / float(n), 0.95, 0.08);
 num.matrix(1, 4).set(0, 0, b0).set(0, 1, b1).set(0, 2, s).set(0, 3, r2).save_csv("data/regression_fit.csv");
 end _lmcode_
 savedsl(sim, "data/linear_regression-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/linear_regression-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/linear_regression-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -81,7 +81,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/linear_regression-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/linear_regression-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/linear_regression-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/linear_regression.png");

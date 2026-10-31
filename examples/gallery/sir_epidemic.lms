@@ -44,7 +44,7 @@ for (k in range(0, 60)) {
 }
 end _lmcode_
 savedsl(sim, "data/sir_epidemic-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/sir_epidemic-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/sir_epidemic-sim.dslb;
 assert(r.code == 0);
 write_file("data/sir_final.txt", r.stdout);
 
@@ -62,6 +62,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/sir_epidemic-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/sir_epidemic-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/sir_epidemic-draw.dslb;
 assert(r.code == 0);
 println("wrote images/sir_epidemic.png");

@@ -62,7 +62,7 @@ for (c in range(0, 5)) {
 phase.save_csv("data/pendulum_phase.csv");
 end _lmcode_
 savedsl(sim, "data/pendulum-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/pendulum-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/pendulum-sim.dslb;
 if (r.code != 0) { println(r.stdout); }
 assert(r.code == 0);
 
@@ -81,7 +81,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/pendulum-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/pendulum-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/pendulum-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/pendulum.png");

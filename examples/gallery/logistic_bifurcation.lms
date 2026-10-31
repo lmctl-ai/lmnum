@@ -36,7 +36,7 @@ for (i in range(0, 20000)) { z = orbit.eval2(3.9, z); acc = acc + lyap.eval2(3.9
 num.assert_close(acc / 20000.0, 0.49, 0.03);
 end _lmcode_
 savedsl(sim, "data/logistic_bifurcation-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl data/logistic_bifurcation-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode data/logistic_bifurcation-sim.dslb;
 assert(r.code == 0);
 write_file("data/logistic.txt", r.stdout);
 
@@ -54,6 +54,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "data/logistic_bifurcation-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl data/logistic_bifurcation-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode data/logistic_bifurcation-draw.dslb;
 assert(r.code == 0);
 println("wrote images/logistic_bifurcation.png");

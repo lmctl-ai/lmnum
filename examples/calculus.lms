@@ -29,7 +29,7 @@ num.assert_close(coef.get(2, 0), 3.0, 0.00000001);
 num.assert_close(num.polyval(coef, 1.5), 3.0 * 2.25 - 1.5 + 0.5, 0.00000001);
 num.assert_close(num.interp(xs, ys, 0.25), 0.5 * (ys.get(4, 0) + ys.get(5, 0)), 0.5);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
-assert(r.code == 0);
+
+r = run_lmcode(p);
+assert(r.ok, "lmcode host failed");
 println(f"wrote {out}");

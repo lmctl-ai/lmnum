@@ -7,6 +7,7 @@
 mkdir("images");
 mkdir("data");
 sim = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
+file_write("data/sir_epidemic-output.txt", "");
 let r1 = 1.5;
 let r2 = 2.5;
 let r3 = 4.0;
@@ -34,21 +35,21 @@ let f3 = num.root("x - 0.999 * exp(-4.0 * (1 - x))", "x", 0.0001, 0.9989);
 num.assert_close(o1.get(600, 1), f1, 0.0001);
 num.assert_close(o2.get(600, 1), f2, 0.0001);
 num.assert_close(o3.get(600, 1), f3, 0.0001);
-num.print("1.5 " + str(1.0 - o1.get(600, 1)));
-num.print("2.5 " + str(1.0 - o2.get(600, 1)));
-num.print("4.0 " + str(1.0 - o3.get(600, 1)));
+file_append("data/sir_epidemic-output.txt", ("1.5 " + str(1.0 - o1.get(600, 1))) + "\n");
+file_append("data/sir_epidemic-output.txt", ("2.5 " + str(1.0 - o2.get(600, 1))) + "\n");
+file_append("data/sir_epidemic-output.txt", ("4.0 " + str(1.0 - o3.get(600, 1))) + "\n");
 for (k in range(0, 60)) {
   let r0 = 1.05 + 0.08 * float(k);
   let s = num.root("x - 0.999 * exp(-" + str(r0) + " * (1 - x))", "x", 0.0001, 0.9989);
-  num.print(str(r0) + " " + str(1.0 - s));
+  file_append("data/sir_epidemic-output.txt", (str(r0) + " " + str(1.0 - s)) + "\n");
 }
 end _lmcode_
-savedsl(sim, "data/sir_epidemic-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/sir_epidemic-sim.dslb;
-assert(r.code == 0);
-write_file("data/sir_final.txt", r.stdout);
+r = run_lmcode(sim);
+assert(r.ok);
+output = read_file("data/sir_epidemic-output.txt");
+write_file("data/sir_final.txt", output);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/sir_epidemic.png", 1100, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
@@ -61,7 +62,6 @@ plot.cmd("plot 'data/sir_final.txt' every ::3::62 u 1:2 w l lw 3 lc rgb '#555555
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/sir_epidemic-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/sir_epidemic-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/sir_epidemic.png");

@@ -56,12 +56,11 @@ rebuild(u, s, v, 1).save_csv("data/svd_k1.csv");
 rebuild(u, s, v, 4).save_csv("data/svd_k4.csv");
 rebuild(u, s, v, 16).save_csv("data/svd_k16.csv");
 end _lmcode_
-savedsl(sim, "data/svd_compression-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/svd_compression-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/svd_compression.png", 1000, 640);
 plot.cmd("set multiplot title 'SVD image compression (lmnum): rank-k reconstructions of a 96 x 96 picture' font ',13'");
 plot.cmd("set size 0.25, 0.5; set origin 0, 0.44");
@@ -79,8 +78,7 @@ plot.cmd("plot 'data/svd_energy.csv' u 1:2 w lp pt 7 ps 0.6 lc rgb '#1f77b4' t '
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/svd_compression-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/svd_compression-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/svd_compression.png");

@@ -1,5 +1,5 @@
 # Two hosts in one script: lmnum integrates the Lorenz system with CVODE and writes a CSV,
-# then lmplot (gnuplot in a static binary) draws it. Each _dsl_ block binds to its own host.
+# then lmplot (gnuplot in a static binary) draws it. Each _lmcode_ block binds to its own host.
 # Needs lmplot on PATH or installable; the PNG lands in images/lorenz_attractor.png.
 mkdir("images");
 mkdir("data");
@@ -14,11 +14,10 @@ sys.tol(0.00000001, 0.0000000001);
 let sol = sys.solve(0.0, 40.0, 4001);
 sol.save_csv("data/lorenz.csv");
 end _lmcode_
-savedsl(sim, "data/lorenz-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/lorenz-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/lorenz_attractor.png", 900, 600);
 plot.cmd("set title 'Lorenz attractor (lmnum CVODE, drawn by lmplot)'");
 plot.cmd("set xlabel 'x'");
@@ -28,7 +27,6 @@ plot.cmd("set palette defined (0 '#1f77b4', 1 '#d62728')");
 plot.cmd("plot 'data/lorenz.csv' using 2:4:1 with lines lc palette lw 1.5");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/lorenz-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/lorenz-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/lorenz_attractor.png");

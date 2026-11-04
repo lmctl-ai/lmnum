@@ -26,11 +26,10 @@ for (k in range(0, 5)) {
 }
 num.parse("4.0 2.75").save_csv("data/lv_fixed.csv");   # the fixed point (c/d, a/b)
 end _lmcode_
-savedsl(sim, "data/predator_prey-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/predator_prey-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/predator_prey.png", 1000, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'");
@@ -42,7 +41,6 @@ plot.cmd("plot for [k=0:4] sprintf('data/lv_%d.csv', k) u 2:3 w l lw 2 lc palett
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/predator_prey-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/predator_prey-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/predator_prey.png");

@@ -77,12 +77,11 @@ for (i in range(0, m + 2)) {
 }
 snaps.save_csv("data/wave_snaps.csv");
 end _lmcode_
-savedsl(sim, "data/wave_equation-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/wave_equation-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/wave_equation.png", 1000, 480);
 plot.cmd("set multiplot layout 1,2 title 'Wave equation on a fixed string (lmnum CVODE, method of lines): a bump splits, travels, reflects' font ',13'");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set xlabel 'x'; set ylabel 'u + offset'; set xrange [0:1]; set yrange [-0.9:6.7]; unset ytics");
@@ -96,8 +95,7 @@ plot.cmd("plot 'data/wave_field.csv' u 1:2:3 w image notitle");
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/wave_equation-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/wave_equation-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/wave_equation.png");

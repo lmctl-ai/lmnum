@@ -65,12 +65,11 @@ num.assert_close(spec.get(best1, 1), 1.0, 0.05);    # noise of 0.1 rms spreads o
 num.assert_close(spec.get(best3, 1), 0.25, 0.05);
 num.assert_close(spec.get(best2, 1), 0.5, 0.2);     # leakage lowers an off-bin tone by up to 36%
 end _lmcode_
-savedsl(sim, "data/spectrum_dft-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/spectrum_dft-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/spectrum_dft.png", 900, 620);
 plot.cmd("set multiplot layout 2,1 title 'Discrete Fourier transform as a matrix product (lmnum): three tones in noise' font ',13'");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; unset key");
@@ -82,8 +81,7 @@ plot.cmd("plot 'data/dft_spectrum.csv' u 1:2 w impulses lw 2 lc rgb '#d62728', '
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/spectrum_dft-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/spectrum_dft-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/spectrum_dft.png");

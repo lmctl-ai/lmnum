@@ -2,7 +2,7 @@
 
 lmnum is the first target of the *scripted scientific libraries* family (see
 `../../simulation/ROADMAP.md`): well-known native libraries embedded into one executable,
-driven from lmscript `_dsl_` bytecode through an embedded schema. The idea is the same as lmplot,
+driven from lmscript `_lmcode_` bytecode through an embedded schema. The idea is the same as lmplot,
 lmhtml, lmcad and lmssh: the script holds policy and control flow, the host holds the heavy code.
 
 - **Scripting only.** There is no user-facing command line beyond `--lmcode`, `--dry-run`,
@@ -13,7 +13,7 @@ lmhtml, lmcad and lmssh: the script holds policy and control flow, the host hold
   systems; serial N_Vector, dense matrix and solver). Both are pinned in `deps.lock` and fetched
   into git-ignored `third_party/` by `scripts/sync-deps.sh`; nothing of them is committed.
 - **lmcode-cpp** (`cpp/dslvm.hpp`, bytecode v5) is vendored and pinned by `sdk.lock`.
-- **lmscript** binds programs to the binary with `_dsl_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";`
+- **lmscript** binds programs to the binary with `_lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";`
   so `lmscript prog.lms` is all a user runs; the schema is read from the binary
   (`lmnum --lmcode-schema --json`).
 

@@ -57,12 +57,11 @@ num.assert_close(gk_smooth, 0.0, 0.000000001);
 num.assert_close(gk_sing, 0.0, 0.0000001);
 num.matrix(1, 2).set(0, 0, max(gk_smooth, 0.0000000000000001)).set(0, 1, max(gk_sing, 0.0000000000000001)).save_csv("data/quad_gk.csv");
 end _lmcode_
-savedsl(sim, "data/quadrature_orders-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/quadrature_orders-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/quadrature_orders.png", 1000, 480);
 plot.cmd("stats 'data/quad_gk.csv' u 1:2 nooutput; gks = STATS_min_x; gkz = STATS_min_y");
 plot.cmd("set multiplot layout 1,2 title 'Quadrature error against the number of panels (lmnum, loops in lmscript)' font ',13'");
@@ -75,8 +74,7 @@ plot.cmd("plot 'data/quad_singular.csv' u 1:2 w lp pt 7 lw 2 lc rgb '#1f77b4' t 
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/quadrature_orders-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/quadrature_orders-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/quadrature_orders.png");

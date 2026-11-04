@@ -3,7 +3,6 @@
 # as a matrix with columns t, y0, y1. The motion conserves V = d*y0 - c*ln(y0) + b*y1 - a*ln(y1),
 # which the program checks along the whole trajectory.
 mkdir("build");
-out = ARGV.len() > 0 ? ARGV[0] : "build/ode_lotka_volterra.dslb";
 mkdir("build/examples");
 p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let sys = num.ode(2);
@@ -26,7 +25,6 @@ for (i in range(0, sol.rows())) {
 num.print("largest drift of the invariant: " + str(worst));
 num.assert_close(worst, 0.0, 0.000001);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
-println(f"wrote {out}");
+r = run_lmcode(p);
+assert(r.ok);
+println("numerical checks passed");

@@ -15,11 +15,10 @@ sol.save_csv("data/lorenz_anim.csv");
 # the attractor stays bounded: |x| < 25, 0 < z < 50
 num.assert_close(min(sol.col(3).max(), 50.0), sol.col(3).max(), 0.0);
 end _lmcode_
-savedsl(sim, "data/lorenz_anim-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/lorenz_anim-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.cmd("set cbrange [0:40]; unset colorbox; set border 3; set tics nomirror; unset key; set xrange [-22:22]; set yrange [0:50]");
 plot.cmd("set xlabel 'x'; set ylabel 'z'; set title 'Lorenz system: sigma = 10, rho = 28, beta = 8/3'");
 for (k in range(0, 90)) {
@@ -30,9 +29,8 @@ for (k in range(0, 90)) {
   plot.close();
 }
 end _lmcode_
-savedsl(draw, "data/lorenz_anim-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/lorenz_anim-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 r = system ffmpeg -y -loglevel error -framerate 18 -i build/lorenz_frames/f%d.png -vf "split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=none" images/lorenz.gif;
 assert(r.code == 0);
 println("wrote images/lorenz.gif");

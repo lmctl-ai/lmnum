@@ -83,7 +83,7 @@ their platform runtimes.
 Eigen linear algebra, SUNDIALS ODE and nonlinear solvers, integration, root finding, optimization and
 fitting, with no Python and no BLAS. It is a scripting
 host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
-`_dsl_` block, compile it, run it with `lmnum --lmcode`. One executable with its third-party libraries
+`_lmcode_` block, compile it, run it with `lmnum --lmcode`. One executable with its third-party libraries
 embedded; Linux uses the system glibc runtime.
 
 ```
@@ -96,8 +96,8 @@ sys.init(0, 10.0).init(1, 10.0);
 let sol = sys.solve(0.0, 60.0, 601);          # rows: t, prey, predators
 sol.save_csv("lv.csv");
 end _lmcode_
-savedsl(p, "lv.dslb");
-system ${dsl_cli(p)} --lmcode lv.dslb;
+r = run_lmcode(p);
+require(r.ok, "numerical program failed");
 ```
 
 `lmscript lotka-volterra.lms` finds `lmnum` on `PATH` or downloads the release binary for your
@@ -125,7 +125,7 @@ max std map to_text save_csv`. Schema and rules: [durable-memory/03-schema-v0.md
 
 Combine it with other hosts in one script: [examples/gallery/lorenz_attractor.lms](examples/gallery/lorenz_attractor.lms)
 integrates the Lorenz system with lmnum and draws it with [lmplot](https://github.com/lmctl-ai/lmplot)
-(two `_dsl_` blocks, two hosts).
+(two `_lmcode_` blocks, two hosts).
 
 ## Examples
 
@@ -184,3 +184,9 @@ Set `LMNUM_MAX_MEMORY_MB` to change it, e.g. `LMNUM_MAX_MEMORY_MB=16384 lmscript
 
 MIT ([LICENSE](LICENSE)). SUNDIALS is BSD-3-Clause; Eigen is MPL-2.0 (used with `EIGEN_MPL2_ONLY`,
 unmodified); see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).
+
+Each execution returns one SDK-framed invocation result: exit 0 success, 2 CLI or
+metadata, 3 load/run, 4 application/output failure. All parts load before any run;
+builders stop at the first failure. Dry mode validates without executing numerical
+work or file operations. `num.print` diagnostics use stderr. Gallery data crosses
+host boundaries through files read after `r.ok`, not process stdout.

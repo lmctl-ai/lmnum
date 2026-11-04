@@ -59,12 +59,11 @@ num.print("points inside the 95% prediction band: " + str(inside) + " of " + str
 num.assert_close(float(inside) / float(n), 0.95, 0.08);
 num.matrix(1, 4).set(0, 0, b0).set(0, 1, b1).set(0, 2, s).set(0, 3, r2).save_csv("data/regression_fit.csv");
 end _lmcode_
-savedsl(sim, "data/linear_regression-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/linear_regression-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/linear_regression.png", 900, 700);
 plot.cmd("stats 'data/regression_fit.csv' u 1:2 nooutput; b0 = STATS_min_x; b1 = STATS_min_y");
 plot.cmd("stats 'data/regression_fit.csv' u 3:4 nooutput; s = STATS_min_x; r2 = STATS_min_y");
@@ -80,8 +79,7 @@ plot.cmd("plot (2*s) w l dt 2 lc rgb '#d62728' notitle, (-2*s) w l dt 2 lc rgb '
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/linear_regression-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/linear_regression-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/linear_regression.png");

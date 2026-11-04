@@ -60,12 +60,11 @@ for (j in range(0, 39)) {
 num.print("max |numerical - characteristics| at t = 0.1: " + str(worst));
 num.assert_close(worst, 0.0, 0.005);
 end _lmcode_
-savedsl(sim, "data/burgers-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode data/burgers-sim.dslb;
-if (r.code != 0) { println(r.stdout); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
-draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot";
 plot.png("images/burgers.png", 1000, 480);
 plot.cmd("set multiplot layout 1,2 title 'Burgers equation u_t + u u_x = nu u_xx (lmnum CVODE BDF): a shock forms at x = 0' font ',13' noenhanced");
 plot.cmd("set border 3; set tics nomirror; set grid lc rgb '#dddddd'; set xlabel 'x'; set ylabel 'u'; set xrange [-1:1]; set yrange [-1.1:1.1]");
@@ -78,8 +77,7 @@ plot.cmd("plot -152.00516 w l dt 2 lc rgb '#d62728' notitle, 'data/burgers_slope
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "data/burgers-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode data/burgers-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/burgers.png");

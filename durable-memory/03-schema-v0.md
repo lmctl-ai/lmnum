@@ -51,5 +51,5 @@ search and a dense finite-difference Jacobian.
 
 ## Why strings, not callbacks
 
-The DSL compiler checks each `_dsl_` block against the schema and has no function values. An
+The DSL compiler checks each `_lmcode_` block against the schema and has no function values. An
 expression string is also data a script can build (`"k*" + name`), print and log.

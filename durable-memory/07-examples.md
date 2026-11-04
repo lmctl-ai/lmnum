@@ -1,6 +1,6 @@
 # Examples
 
-`examples/*.lms` each assert their own results; `examples/combo/lorenz_plot.lms` shows two hosts in
+`examples/*.lms` each assert their own results; `examples/gallery/lorenz_attractor.lms` shows two hosts in
 one script (lmnum for CVODE, lmplot for the picture). Notes from writing them:
 
 - The DSL has no `log`/`pi`; use `num.eval("pi")` and `num.func("log(a)", "a")`.
@@ -13,7 +13,7 @@ one script (lmnum for CVODE, lmplot for the picture). Notes from writing them:
 
 `examples/gallery/*.lms` (25 programs) each compute with lmnum, write CSV into `data/`, and draw with lmplot (or lmdraw) into `images/` in the
 *current directory*; the README gallery shows copies in `docs/images/` (`examples/render-all.sh` runs them from a checkout and copies;
-PNG <= 300 KB, GIF <= 3 MB). Every example, old and new, ends with `r = system ${dsl_cli(p)} --lmcode ${out}; assert(r.code == 0);`
+PNG <= 300 KB, GIF <= 3 MB). Every example, old and new, ends with `r = run_lmcode(p); assert(r.ok);`
 so `lmctl autorun <raw github url>` produces the output, not just bytecode. README captions are the autorun command.
 - Stories: Lorenz (still and 90-frame GIF via ffmpeg palette), Lotka-Volterra orbits (conserved H asserted), Van der Pol limit
   cycle, Robertson kinetics restarted per decade (log time axis), heat equation by method of lines vs the exact two-mode
@@ -26,9 +26,11 @@ so `lmctl autorun <raw github url>` produces the output, not just bytecode. READ
   exponent 0.49 at r = 3.9; ln comes from `num.func("log(...)")`), `hilbert_conditioning` (cond(H5) = 4.77e5 and cond(H10) = 1.6e13
   asserted; `Matrix.solve` correctly refuses from n = 12 with "matrix is singular"), `vibration_modes` (24-mass chain, `eig_sym`
   vs 2 - 2 cos(k pi / 25) to 1e-10, `eigvec_sym` mode 1 vs a sine). Van der Pol now samples 5001 points per trajectory.
-- Sweeps print one line per case with `num.print`; lmscript saves `r.stdout`; gnuplot reads the file (rows it cannot parse, such as the
-  final JSON status line or rows starting with a tag like `L`, are skipped, so one file can hold two series). `plot.data`
-  truncates long strings (about 8-11 KB seen): use a file. No `'< grep'` pipes (not portable to Windows).
+- Data sweeps use `file_write`/`file_append` inside the block; outer lmscript reads the
+  file only after `r.ok`. `num.print` is stderr diagnostics and result maps have no
+  stdout field. `plot.data` can truncate large strings: use files. Renderer calls
+  require compatible lmplot/lmdraw on PATH and have no release-install fallback.
+
 
 ## Added in the 0.1.2 pass (12 examples, each with a known answer)
 
@@ -45,5 +47,5 @@ so `lmctl autorun <raw github url>` produces the output, not just bytecode. READ
   `bottom center` etc., or `at screen`); `set size ratio -1` in a layout panel also shifts later keys; contour plots need
   `set surface` plus per-plot `nosurface`/`nocontours`; `with image` takes x-y-z triples on a grid (pm3d needs blank lines);
   titles with `_` need `noenhanced`; a DSL `fn` cannot see block-level `let` variables (pass them as arguments).
-- lmscript: `${name}` in a `_dsl_` block is one expression, not a statement splice (unroll repeated statements); numbers in text
+- lmscript: `${name}` in a `_lmcode_` block is one expression, not a statement splice (unroll repeated statements); numbers in text
   parse with `json_parse`.

@@ -34,6 +34,12 @@ command -v ninja >/dev/null 2>&1 && GEN="-G Ninja"
 "$TIMEOUT" 1200 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >/dev/null
 "$TIMEOUT" 1200 cmake --build "$BUILD_DIR" --parallel "${BUILD_JOBS:-2}" >"$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log" >&2; fail "build"; }
 ok "build"
+export LMSCRIPT_BIN="$LMSCRIPT"
+export LMNUM_HOST="$ROOT/$HOST"
+run_prog() { "$TIMEOUT" 300 python3 tests/invocation.py "$@"; }
+capture_prog() { run_prog --capture-only --capture "$WORK/$1.capture" "$WORK/$1.lms" >/dev/null; }
+printf 's = load_schema(cli="lmnum");\n' >"$WORK/discover.lms"
+"$LMSCRIPT" "$WORK/discover.lms" >/dev/null || fail "host schema discovery"
 python3 tests/check-host-flags.py schema/lmnum.dsl.json "$HOST" || fail "hard host flag cutover"
 
 want_version="lmnum $(sed -n 's/^project(lmnum VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
@@ -81,14 +87,21 @@ mkdir -p build/examples
 n=0
 for src in tests/*.lms examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$TIMEOUT" 300 "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
+  "$TIMEOUT" 300 "$LMSCRIPT" --check "$src" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
+  run_prog --capture-only --capture "$WORK/$name.capture" "$src" >"$WORK/$name.capture.log" 2>&1 || { cat "$WORK/$name.capture.log" >&2; fail "$name capture"; }
+  python3 - "$WORK/$name.capture/0.lmcode" schema/lmnum.dsl.json <<'PYBYTE'
+import hashlib,pathlib,sys
+b=pathlib.Path(sys.argv[1]).read_bytes()
+assert b[:6] == b'DSLB\0\6'
+assert b[6:38] == hashlib.sha256(pathlib.Path(sys.argv[2]).read_bytes()).digest()
+PYBYTE
   n=$((n+1))
 done
 ok "$n programs compile as bytecode v6"
 for src in tests/*.lms examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$TIMEOUT" 180 "$HOST" --lmcode "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
-  grep -q '"ok": true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
+  "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/$name.capture/0.lmcode" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
+  grep -q '"ok":true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
 done
 ok "$n programs run and pass their own assertions"
 
@@ -96,7 +109,7 @@ ok "$n programs run and pass their own assertions"
 for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/before.txt"
 for src in examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$TIMEOUT" 180 "$HOST" --lmcode "build/$name.dslb" >/dev/null 2>&1 || fail "$name rerun"
+  "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/$name.capture/0.lmcode" >/dev/null 2>&1 || fail "$name rerun"
 done
 for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/after.txt"
 cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
@@ -107,13 +120,12 @@ nerr=0
 expect_error() { # name, snippet, expected message fragment
   nerr=$((nerr+1))
   cat >"$WORK/$1.lms" <<LMS
-p = _dsl_ cli="lmnum";
+p = _lmcode_ cli="lmnum";
 $2
-end _dsl_
-savedsl(p, "$WORK/$1.dslb");
+end _lmcode_
 LMS
-  "$TIMEOUT" 300 "$LMSCRIPT" "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
-  set +e; out="$("$TIMEOUT" 180 "$HOST" --lmcode "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
+  "$TIMEOUT" 300 "$LMSCRIPT" --check "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
+  set +e; out="$(run_prog "$WORK/$1.lms" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] || fail "$1: exit code $code, expected 3 ($out)"
   echo "$out" | grep -q "$3" || fail "$1: message lacks '$3': $out"
 }
@@ -156,24 +168,23 @@ ok "errors stop the program with exit 3 and a clear message ($nerr cases)"
 # the JSON line) instead of exhausting the machine. A small budget everywhere; on Linux also the
 # default 4096 MiB under a 6 GiB address-space limit (ulimit only here, never in the host).
 cat >"$WORK/runaway.lms" <<LMS
-p = _dsl_ cli="lmnum";
+p = _lmcode_ cli="lmnum";
 let i = 0;
 while (i < 1000000) {
   let m = num.random(1000, 1000, i);
   i = i + 1;
 }
-end _dsl_
-savedsl(p, "$WORK/runaway.dslb");
+end _lmcode_
 LMS
-"$TIMEOUT" 300 "$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
-set +e; out="$(LMNUM_MAX_MEMORY_MB=64 "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+capture_prog runaway || fail "runaway.lms compile"
+set +e; out="$(LMNUM_MAX_MEMORY_MB=64 "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.capture/0.lmcode" 2>"$WORK/runaway.err")"; code=$?; set -e
 [ "$code" = 3 ] || fail "runaway loop under LMNUM_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
 echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
 grep -q "LMNUM_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
-set +e; LMNUM_MAX_MEMORY_MB=-5 "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+set +e; LMNUM_MAX_MEMORY_MB=-5 "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.capture/0.lmcode" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
 [ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMNUM_MAX_MEMORY_MB: exit $code"
 if [ "$UNAME_S" = Linux ]; then
-  set +e; out="$(ulimit -v 6291456; "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$(ulimit -v 6291456; "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/runaway.capture/0.lmcode" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
   ok "memory budget: runaway loop stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB)"
 else
@@ -203,11 +214,14 @@ for ex in $(grep -o '(examples/[A-Za-z0-9_/.-]*\.lms)' README.md | tr -d '()' | 
 done
 ok "README gallery: $nimg images valid and within size limits, every linked example exists"
 
-# Gallery examples: lmnum computes, lmplot draws (needs lmplot on PATH, or network for install=; the GIF needs ffmpeg).
-if command -v lmplot >/dev/null 2>&1 || [ "${LMNUM_TEST_NETWORK:-}" = 1 ]; then
+# Gallery runs only with a compatible renderer already on PATH; never install one in CI.
+if command -v lmplot >/dev/null 2>&1 && lmplot --lmcode-schema --json >/dev/null 2>&1; then
   ng=0
   for src in examples/gallery/*.lms; do
     name="$(basename "$src" .lms)"
+    if [ "$name" = markov_chain ] && ! { command -v lmdraw >/dev/null 2>&1 && lmdraw --lmcode-schema --json >/dev/null 2>&1; }; then
+      echo "note: $name skipped (no compatible lmdraw on PATH)"; continue
+    fi
     if [ "$name" = lorenz_anim ] && ! command -v ffmpeg >/dev/null 2>&1; then echo "note: $name skipped (no ffmpeg on PATH)"; continue; fi
     "$TIMEOUT" 300 "$LMSCRIPT" "$src" >"$WORK/gallery-$name.log" 2>&1 || { cat "$WORK/gallery-$name.log" >&2; fail "gallery example $name"; }
     ng=$((ng+1))
@@ -218,25 +232,24 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMNUM_TEST_NETWORK:-}" = 1 ]; then
   done
   ok "$ng gallery examples run and wrote valid images (docs/images are refreshed by examples/render-all.sh)"
 else
-  ok "gallery examples skipped (no lmplot on PATH, LMNUM_TEST_NETWORK unset): docs/images not regenerated"
+  ok "gallery examples skipped (no compatible lmplot on PATH): docs/images not regenerated"
 fi
 
-# --dry-run runs the program but writes no files.
+# --dry-run loads/verifies without executing the program or writing files.
 cat >"$WORK/dry.lms" <<LMS
-p = _dsl_ cli="lmnum";
+p = _lmcode_ cli="lmnum";
 num.identity(2).save_csv("$WORK/dry.csv");
-end _dsl_
-savedsl(p, "$WORK/dry.dslb");
+end _lmcode_
 LMS
-"$TIMEOUT" 300 "$LMSCRIPT" "$WORK/dry.lms" >/dev/null || fail "dry.lms compile"
-"$TIMEOUT" 180 "$HOST" --dry-run --lmcode "$WORK/dry.dslb" >/dev/null 2>"$WORK/dry.err" || fail "dry run"
+capture_prog dry || fail "dry.lms compile"
+"$TIMEOUT" 180 "$HOST" --dry-run --lmcode "$WORK/dry.capture/0.lmcode" >/dev/null 2>"$WORK/dry.err" || fail "dry run"
 [ ! -e "$WORK/dry.csv" ] || fail "--dry-run wrote a file"
-grep -q "would write" "$WORK/dry.err" || fail "--dry-run did not report the skipped write"
-"$TIMEOUT" 180 "$HOST" --lmcode "$WORK/dry.dslb" >/dev/null || fail "real run"
+[ ! -s "$WORK/dry.err" ] || fail "--dry-run executed a save_csv diagnostic"
+"$TIMEOUT" 180 "$HOST" --lmcode "$WORK/dry.capture/0.lmcode" >/dev/null || fail "real run"
 [ -s "$WORK/dry.csv" ] || fail "save_csv wrote nothing"
-ok "--dry-run reports save_csv without writing; a real run writes"
+ok "--dry-run validates without executing; a real run writes"
 
-set +e; "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
+set +e; "$TIMEOUT" 180 "$HOST" --lmcode "$WORK/does-not-exist.lmcode" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
 set +e; "$TIMEOUT" 180 "$HOST" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 2 ] || fail "usage exit code $code, expected 2"
@@ -252,11 +265,14 @@ w=pathlib.Path(sys.argv[1])
 read=lambda name:set((w/name).read_text().splitlines())
 assert read('std-registry.sig')-read('std-builtins.sig') == read('std-host-only.sig'), 'host-only registry drift'
 schema=str(pathlib.Path('schema/lmnum.dsl.json').resolve()).replace('\\','/')
-out=str(w/'std-probe.dslb').replace('\\','/')
-(w/'std-probe.lms').write_text('p = _lmcode_ schema='+json.dumps(schema)+';\nlet values = str_list().add("abc");\nif (str_len(values.at(0)) != 3) { let bad = int_list().at(0); }\nend _lmcode_\nsavedsl(p, '+json.dumps(out)+');\n')
+(w/'std-probe.lms').write_text('p = _lmcode_ schema='+json.dumps(schema)+';\nlet values = str_list().add("abc");\nif (str_len(values.at(0)) != 3) { let bad = int_list().at(0); }\nend _lmcode_\n')
 PYSTD
-"$LMSCRIPT" "$WORK/std-probe.lms" > "$WORK/std-probe.log" 2>&1 || { cat "$WORK/std-probe.log"; fail "implicit std compile"; }
-"$HOST" --lmcode "$WORK/std-probe.dslb" > "$WORK/std-run.log" 2>&1 || { cat "$WORK/std-run.log"; fail "implicit std runtime"; }
+run_prog "$WORK/std-probe.lms" > "$WORK/std-run.log" 2>&1 || { cat "$WORK/std-run.log"; fail "implicit std runtime"; }
+grep -q '"ok":true' "$WORK/std-run.log" || fail "implicit std success envelope"
 ok "host-only signatures and implicit std runtime"
 
+python3 tests/protocol.py "$WORK" || fail "invocation controls"
+ok "one frame, builder order, load-before-effects, dry metadata and introspection"
+python3 tests/gallery-data.py || fail "offline gallery calculations and data handoff"
+ok "offline gallery calculations and file data handoff"
 echo "all $pass checks passed"

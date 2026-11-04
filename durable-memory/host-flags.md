@@ -2,7 +2,7 @@
 
 Only --lmcode, --lmcode-schema and --lmcode-signatures select the host language
 protocol. Retired modes fail before input paths are opened; original parser
-controls were watched fail. DSLB magic, .dslb names and numerical APIs remain.
+controls were watched fail. DSLB magic, private input files and numerical APIs remain.
 
 The SDK comes through sync-sdk.sh at 20325f7; source compiler capability checks
 verify v6 and the current 206 standard declarations. The full Linux gate passes

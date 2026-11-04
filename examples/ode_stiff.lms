@@ -2,7 +2,6 @@
 # Rates span nine orders of magnitude; an explicit method would need billions of steps.
 # Mass is conserved (y0 + y1 + y2 = 1), which the program checks.
 mkdir("build");
-out = ARGV.len() > 0 ? ARGV[0] : "build/ode_stiff.dslb";
 p = _lmcode_ cli="lmnum" install="github:lmctl-ai/lmnum@latest";
 let sys = num.ode(3).stiff();
 sys.rhs(0, "-0.04*y0 + 10000*y1*y2");
@@ -16,7 +15,6 @@ num.print("y(40) = " + last.to_text());
 num.assert_close(last.get(0, 1) + last.get(0, 2) + last.get(0, 3), 1.0, 0.0000001);
 num.assert_close(last.get(0, 1), 0.7158, 0.001);   # reference value from the literature
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
-println(f"wrote {out}");
+r = run_lmcode(p);
+assert(r.ok);
+println("numerical checks passed");

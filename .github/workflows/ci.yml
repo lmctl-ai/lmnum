@@ -53,10 +53,6 @@ jobs:
           scripts/sync-deps.sh
           scripts/sync-sdk.sh --verify
 
-      - name: toolchain (linux)
-        if: runner.os == 'Linux' && env.ONLY_OK == 'true'
-        run: timeout 180 sudo apt-get update -qq && timeout 180 sudo apt-get install -y -qq ninja-build
-
       - name: toolchain (macos)
         timeout-minutes: 5
         if: runner.os == 'macOS' && env.ONLY_OK == 'true'
@@ -77,13 +73,13 @@ jobs:
           g++ --version | head -1
 
       - name: lmscript compiler (npm @lmctl-ai/lmctl, DSL v5)
-        if: env.ONLY_OK == 'true'
+        if: runner.os != 'Linux' && env.ONLY_OK == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
 
       - name: install and probe the compiler
-        if: env.ONLY_OK == 'true'
+        if: runner.os != 'Linux' && env.ONLY_OK == 'true'
         shell: bash
         run: |
           if [ -x /usr/bin/timeout ]; then deadline=/usr/bin/timeout
@@ -102,8 +98,28 @@ jobs:
           chmod +x .ci-bin/python3
           echo "$PWD/.ci-bin" >> "$GITHUB_PATH"
 
+      # Linux builds and tests inside a glibc 2.28 image (build-time dependency on lmctl-ai/.github, pinned
+      # to a commit), so the binary runs on RHEL 8+, Debian 10+, Ubuntu 18.10+. The action gates the floor.
+      - name: build and test (linux, glibc 2.28 image)
+        if: runner.os == 'Linux' && env.ONLY_OK == 'true'
+        uses: lmctl-ai/.github/actions/oldglibc@4a1a83bcc67cc37a835236ce750eaeef2bc4b455
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          lmctl-version: 0.2.460
+          env: GITHUB_TOKEN
+          run: |
+            if [ -x /usr/bin/timeout ]; then deadline=/usr/bin/timeout
+            elif command -v gtimeout >/dev/null 2>&1; then deadline=gtimeout
+            else deadline=timeout; fi
+            "$deadline" 180 scripts/select-compiler.sh | tee compiler.txt
+            grep -q lmscript compiler.txt || { echo "no compatible lmcode v6 compiler available"; exit 1; }
+            timeout 1800 ./test.sh
+          check: build/lmnum
+          max-glibc: '2.28'
+
       - name: build and test
-        if: env.ONLY_OK == 'true'
+        if: runner.os != 'Linux' && env.ONLY_OK == 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +178,7 @@ jobs:
         run: |
           # Exactly five binary assets; licenses are embedded, checksums are in notes.
           cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          Linux binaries require glibc >= 2.35 and dynamically link only system glibc.
+          Linux binaries require glibc >= 2.28 and dynamically link only system glibc.
           C++ runtimes and mathematical libraries remain static. All five platforms passed CI.
 
           v0.1.4 supersedes v0.1.3. v0.1.3 shipped unsupported musl static-pie binaries;

@@ -8,6 +8,8 @@ The supported release is **v0.1.4**. Linux release binaries require glibc 2.35 o
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmnum?label=release)](https://github.com/lmctl-ai/lmnum/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**Documentation:** [Quick reference](https://www.lmctl.com/tools/lmnum/) · [LLM skill](https://www.lmctl.com/tools/lmnum/skill.html) · [Guide](https://www.lmctl.com/tools/lmnum/guide.html) · [Reference](https://www.lmctl.com/tools/lmnum/reference.html)
+
 ### Differential equations
 
 | ![predator_prey](docs/images/predator_prey.png) | ![van_der_pol](docs/images/van_der_pol.png) |
